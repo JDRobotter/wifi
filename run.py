@@ -11,21 +11,23 @@ class Karma2:
     def __init__(self, karma, essid):
       self.essid = essid
       self.karma = karma
-      print "[+] Creating AP %s"%essid
+
       iface,airbase_process = self.create_access_point(essid)
       subnet = self.karma.get_unique_subnet()
-      print "[+] Uping iface %s w/ subnet %s"%(iface,subnet)
       self.setup_iface(iface,subnet)
-      print "[+] Starting dhcp server %s %s"%(iface,subnet)
       dhcpd_process = self.start_dhcpd(iface,subnet)
 
     def start_dhcpd(self, iface, subnet):
       # create a temporary file
-      #dnsmasq -d -i eth0 -ieth0 -F 192.168.1.10,192.168.1.200
+      print "[+] Starting dhcp server %s %s"%(iface,subnet)
       cmd = ['dnsmasq',
         '-d',
         '-i', iface,
         '-F', '192.168.%d.100,192.168.%d.200'%(subnet,subnet),
+        '--dhcp-option=option:router,192.168.%d.254'%(subnet),
+        '--dhcp-option=option:dns-server,192.168.%d.254'%(subnet),
+        '-z',
+        '-R','-S','8.8.8.8',
       ]
       p = subprocess.Popen(cmd,
         stdout=subprocess.PIPE,
@@ -33,16 +35,18 @@ class Karma2:
       return p
 
     def setup_iface(self, iface, subnet):
+      print "[+] Uping iface %s w/ subnet %s"%(iface,subnet)
       iprange = "192.168.%d.254/24"%subnet
       cmd = ["ifconfig",iface,iprange]
       p = subprocess.Popen(cmd)
       p.wait()
 
     def create_access_point(self, essid):
+      print "[+] Creating AP %s"%essid
       cmd = ["airbase-ng",
         "--essid", "%s"%essid,
         "-c","4",
-        self.karma.ifap]
+        self.karma.ifmon]
       p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
       while True:
@@ -52,11 +56,33 @@ class Karma2:
           iface, = m.groups()
           return iface,p
 
-  def __init__(self, ifmon, ifap):
+  def __init__(self, ifgw, ifmon):
     self.ifmon = ifmon
-    self.ifap = ifap
+    self.ifgw = ifgw
     self.aps = {}
     self.subnets = set(xrange(50,256)) 
+    self.clear_iptables()
+    self.setup_nat(ifgw)
+
+  def clear_iptables(self):
+    print "[+] Clearing iptables rules"
+    cmd = ['iptables','-F']
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p.wait()
+
+    cmd = ['iptables','-t','nat','-F']
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p.wait()
+
+  def setup_nat(self, iface):
+    print "[+] Setting up NAT on %s"%iface
+    cmd = ["iptables", 
+      "-t","nat",
+      "-A","POSTROUTING",
+      "-o",iface,
+      "-j","MASQUERADE"]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p.wait()
 
   def get_unique_subnet(self):
     return self.subnets.pop()
@@ -75,7 +101,7 @@ class Karma2:
 
 # CC:5D:4E:EC:A6:CC  E4:F8:EF:1B:7B:A3  -75    0 - 1e
 if __name__ == '__main__':
-  km = Karma2('mon0','mon0')
+  km = Karma2('wlan0','wlan1mon')
 
   #km.do_sniff()
   Karma2.AccessPoint(km,"000XYZ")
