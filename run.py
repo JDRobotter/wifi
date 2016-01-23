@@ -101,10 +101,16 @@ class Karma2:
 
 # CC:5D:4E:EC:A6:CC  E4:F8:EF:1B:7B:A3  -75    0 - 1e
 if __name__ == '__main__':
-  km = Karma2('wlan0','wlan1mon')
+
+  # network interface connect to the outside world
+  GATEWAY_INTERFACE='wlan0'
+  # 802.11 monitor interface created using airmon-zc 
+  MONITOR_INTERFACE='wlan1mon'
+  km = Karma2(GATEWAY_INTERFACE, MONITOR_INTERFACE)
 
   #km.do_sniff()
-  Karma2.AccessPoint(km,"000XYZ")
+  for i in xrange(0,10):
+    Karma2.AccessPoint(km,"NSA honeypot #%d"%i)
 
   while True:
     time.sleep(1)
