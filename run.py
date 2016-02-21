@@ -18,7 +18,7 @@ class Karma2:
 
       self.activity_ts = time.time()
 
-      iface,self.airbase_process = self.create_access_point(essid)
+      iface,self.airbase_process = self.create_airbase_access_point(essid)
       subnet = self.karma.get_unique_subnet()
       self.setup_iface(iface,subnet)
       # redirect the following ports
@@ -109,8 +109,24 @@ class Karma2:
       p = subprocess.Popen(cmd)
       p.wait()
 
-    def create_access_point(self, essid):
-      print "[+] Creating AP %s"%essid
+    def create_hostapd_access_point(self, essid):
+      print "[+] Creating (hostapd) AP %s"%essid
+
+      interface = '???'
+      channel = 4
+
+      f = tempfile.NamedTemporaryFile(delete=False)
+      f.write("ssid=%s"%(essid))
+      f.write("interface=%s"%(interface))
+      f.write("channel=%s"%(channel))
+      f.close()
+
+      cmd = ["hostapd",f.name]
+      p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+      return interface,p
+
+    def create_airbase_access_point(self, essid):
+      print "[+] Creating (airbase) AP %s"%essid
       cmd = ["airbase-ng",
         "--essid", "%s"%essid,
         "-c","4",
