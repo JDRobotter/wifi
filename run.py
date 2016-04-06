@@ -6,6 +6,7 @@ import subprocess
 from scapy.all import *
 from select import select
 import argparse
+from datetime import datetime
 
 
 DEFAULT = '\033[49m\033[39m'
@@ -29,6 +30,8 @@ def parse_args():
     parser.add_argument("-e", "--enable", help="Choose the monitor interface to enable")
     parser.add_argument("-a", "--hostapd", help="shoose the hostapd interface")
     parser.add_argument("-n", "--name", help="start only this given essid")
+    parser.add_argument("-f", "--framework", help="path to the metasploit console")
+    parser.add_argument("-t", "--tcpdump", action='store_true', help="run tcpdump on interface")
     return parser.parse_args()
 
 
@@ -54,7 +57,15 @@ class Karma2:
       self.setup_redirections(iface,443,8080)
       #self.setup_redirections(iface,443,8080)
       self.dhcpd_process = self.start_dhcpd(iface,subnet)
+      if self.karma.tcpdump:
+        self.start_tcp_dump()
 
+    def start_tcp_dump(self):
+      logfile = "wifi-%s-%s.cap"%(self.ifhostapd,datetime.now().strftime("%Y%m%d-%H%M%S"))
+      print "[+] Starting tcpdump %s"%logfile
+      cmd = ['tcpdump','-i', self.ifhostapd, '-w', logfile]
+      p = subprocess.Popen(cmd)
+    
     def run(self):
       nclients = 0
       while True:
@@ -174,7 +185,7 @@ class Karma2:
           iface, = m.groups()
           return iface,p
 
-  def __init__(self, ifgw, ifmon, ifhostapd = None):
+  def __init__(self, ifgw, ifmon, ifhostapd = None, metasploit = None, tcpdump = None):
     self.ifmon = ifmon
     self.ifgw = ifgw
     self.ifhostapd = ifhostapd
@@ -182,6 +193,14 @@ class Karma2:
     self.subnets = set(xrange(50,256)) 
     self.clear_iptables()
     self.setup_nat(ifgw)
+    self.tcpdump = tcpdump
+    if metasploit is not None:
+      self.start_metasploit(metasploit)
+    
+  def start_metasploit(self, console):
+    print "[+] Starting metasploit"
+    cmd = [console,'-r', 'run_fake_services.rb']
+    p = subprocess.Popen(cmd)
 
   def clear_iptables(self):
     print "[+] Clearing iptables rules"
@@ -236,6 +255,11 @@ class Karma2:
 
     sniff(prn=_filter,store=0)
 
+def get_gw(interface):
+    for nw, nm, gw, iface, addr in read_routes():
+        if gw != "0.0.0.0":
+            return gw
+
 if __name__ == '__main__':
 
   args = parse_args()
@@ -243,7 +267,10 @@ if __name__ == '__main__':
     cmd = "airmon-ng start %s"%args.enable
     subprocess.Popen(cmd)
     
-  km = Karma2(args.gateway, args.monitor, args.hostapd)
+  if args.gateway is None:
+    args.gateway = get_gw(args.hostapd)
+    
+  km = Karma2(args.gateway, args.monitor, args.hostapd, args.framework, args.tcpdump)
   if args.name is not None:
     # 24h timeout
     km.create_ap(args.name, 60*60*24)
