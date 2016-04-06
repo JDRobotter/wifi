@@ -28,6 +28,7 @@ def parse_args():
     parser.add_argument("-m", "--monitor", help="Choose the monitor interface")
     parser.add_argument("-e", "--enable", help="Choose the monitor interface to enable")
     parser.add_argument("-a", "--hostapd", help="shoose the hostapd interface")
+    parser.add_argument("-n", "--name", help="start only this given essid")
     return parser.parse_args()
 
 
@@ -36,10 +37,12 @@ class Karma2:
   FORBIDDEN_APS = ('ottersHQ','forYourOttersOnly')
 
   class AccessPoint(Thread):
-    def __init__(self, karma, essid):
+    def __init__(self, karma, ifhostapd, essid, timeout):
       Thread.__init__(self)
       self.essid = essid
       self.karma = karma
+      self.timeout = timeout
+      self.ifhostapd = ifhostapd
 
       self.activity_ts = time.time()
 
@@ -57,7 +60,7 @@ class Karma2:
       while True:
 
         # check timeout
-        if nclients == 0 and time.time() - self.activity_ts > 30.0:
+        if nclients == 0 and time.time() - self.activity_ts > self.timeout:
           print "[x] No activity for essid",self.essid,"destroying AP"
           self.dhcpd_process.kill()
           self.dhcpd_process.wait()
@@ -209,8 +212,8 @@ class Karma2:
   def release_ap(self, essid):
     self.aps.pop(essid)
 
-  def create_ap(self, essid):
-    ap = self.AccessPoint(self, essid)
+  def create_ap(self, essid, timeout = 30):
+    ap = self.AccessPoint(self, self.ifhostapd, essid, timeout)
     ap.daemon = True
     ap.start()
     self.register_ap(essid,ap)
@@ -241,9 +244,11 @@ if __name__ == '__main__':
     subprocess.Popen(cmd)
     
   km = Karma2(args.gateway, args.monitor, args.hostapd)
-
-  #km.create_ap('NSA Honeypot')
-  km.do_sniff()
+  if args.name is not None:
+    # 24h timeout
+    km.create_ap(args.name, 60*60*24)
+  else:
+    km.do_sniff()
 
   while True:
     time.sleep(1)
