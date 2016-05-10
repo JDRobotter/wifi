@@ -111,7 +111,7 @@ class Karma2:
 
       self.activity_ts = time.time()
 
-      iface,self.airbase_process = self.create_hostapd_access_point(essid)
+      iface,self.hostapd_process = self.create_hostapd_access_point(essid)
       subnet = self.karma.get_unique_subnet()
       self.setup_iface(iface,subnet)
       # redirect the following ports
@@ -129,6 +129,7 @@ class Karma2:
     
     def run(self):
       nclients = 0
+      print "[+] now running"
       while True:
 
         # check timeout
@@ -136,14 +137,14 @@ class Karma2:
           print "[x] No activity for essid",self.essid,"destroying AP"
           self.dhcpd_process.kill()
           self.dhcpd_process.wait()
-          self.airbase_process.kill()
-          self.airbase_process.wait()
+          self.hostapd_process.kill()
+          self.hostapd_process.wait()
           self.karma.release_ap(self.essid)
           self.karma.ifhostapds.free_one(self.ifhostapd)
           return
 
         dhcpfd = self.dhcpd_process.stderr.fileno()
-        airfd = self.airbase_process.stdout.fileno()
+        airfd = self.hostapd_process.stdout.fileno()
 
         rlist,wlist,xlist = select([dhcpfd,airfd],[],[],1)
         if dhcpfd in rlist:
@@ -164,13 +165,13 @@ class Karma2:
             nclients -= 1
 
         if airfd in rlist:
-          line = self.airbase_process.stdout.readline()
+          line = self.hostapd_process.stdout.readline()
           if len(line) == 0:
             continue
-          m = re.match(r".*Client ([0-9A-Za-z:]+) associated \(\w+\) to ESSID",line)
+          m = re.match(r".*: STA ([a-zA-Z0-9:]+) IEEE 802.11: authenticated",line)
           if m is not None:
             mac, = m.groups()
-            print "Client",mac,"associated to",self.essid
+            print "Client %s associated to %s"%(_ctxt(mac,GREEN),_ctxt(self.essid,GREEN))
 
             self.activity_ts = time.time()
 
@@ -212,7 +213,6 @@ class Karma2:
       print "[+] Uping iface %s w/ subnet %s"%(iface,subnet)
       iprange = "%s"%subnet.range()
       cmd = ["ifconfig",iface,iprange]
-      print cmd
       p = subprocess.Popen(cmd)
       p.wait()
 
@@ -220,7 +220,7 @@ class Karma2:
       print "[+] Creating (hostapd) AP %s"%_ctxt(essid,GREEN)
 
       interface = self.ifhostapd.str()
-      channel = 4
+      channel = random.randint(1,15)
 
       f = tempfile.NamedTemporaryFile(delete=False)
       f.write("ssid=%s\n"%(essid))
@@ -228,8 +228,8 @@ class Karma2:
       f.write("channel=%s\n"%(channel))
       f.close()
 
-      cmd = ["hostapd",f.name]
-      p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+      cmd = ["hostapd","-d",f.name]
+      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       return interface,p
 
     def create_airbase_access_point(self, essid):
