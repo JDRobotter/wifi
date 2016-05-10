@@ -81,7 +81,7 @@ class Karma2:
     def free_one(self, _iface):
       for iface in self.ifs:
         if iface.iface == _iface.iface:
-          iface.available = False
+          iface.available = True
           return
       return
 
