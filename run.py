@@ -113,11 +113,13 @@ class Karma2:
 
       iface,self.hostapd_process = self.create_hostapd_access_point(essid)
       subnet = self.karma.get_unique_subnet()
+      self.subnet = subnet
       self.setup_iface(iface,subnet)
       # redirect the following ports
       self.setup_redirections(iface,80,8080)
       self.setup_redirections(iface,443,8080)
       self.dhcpd_process = self.start_dhcpd(iface,subnet)
+      self.dnswatch_process = self.start_dnswatch(iface)
       if self.karma.tcpdump:
         self.start_tcp_dump()
 
@@ -139,14 +141,18 @@ class Karma2:
           self.dhcpd_process.wait()
           self.hostapd_process.kill()
           self.hostapd_process.wait()
+          self.dnswatch_process.kill()
+          self.dnswatch_process.wait()
           self.karma.release_ap(self.essid)
           self.karma.ifhostapds.free_one(self.ifhostapd)
+          self.karma.free_subnet(self.subnet)
           return
 
         dhcpfd = self.dhcpd_process.stderr.fileno()
         airfd = self.hostapd_process.stdout.fileno()
+        dnswfd = self.dnswatch_process.stdout.fileno()
 
-        rlist,wlist,xlist = select([dhcpfd,airfd],[],[],1)
+        rlist,wlist,xlist = select([dhcpfd,airfd,dnswfd],[],[],1)
         if dhcpfd in rlist:
           line = self.dhcpd_process.stderr.readline()
           if len(line) == 0:
@@ -175,6 +181,16 @@ class Karma2:
 
             self.activity_ts = time.time()
 
+        if dnswfd in rlist:
+          line = self.dnswatch_process.stdout.readline()
+          if len(line) == 0:
+            continue
+          # only show requests
+          if "A?" in line or "AAAA?" in line or "CNAME" in line:
+            print "DNS: %s"%(_ctxt(line,RED))
+
+          self.activity_ts = time.time()
+
     def setup_redirections(self, iface, inport, outport):
       print "[+] Setting up (%s) %d to %d redirection"%(iface,inport,outport)
       cmd = ['iptables',
@@ -194,7 +210,7 @@ class Karma2:
 
     def start_dhcpd(self, iface, subnet):
       # create a temporary file
-      print "[+] Starting dhcp server %s %s"%(iface,subnet)
+      print "[+] Starting dhcp server %s %s"%(iface,subnet.range())
       cmd = ['dnsmasq',
         '-d',
         '--bind-dynamic',
@@ -210,11 +226,18 @@ class Karma2:
       return p
 
     def setup_iface(self, iface, subnet):
-      print "[+] Uping iface %s w/ subnet %s"%(iface,subnet)
+      print "[+] Uping iface %s w/ subnet %s"%(iface,subnet.range())
       iprange = "%s"%subnet.range()
       cmd = ["ifconfig",iface,iprange]
       p = subprocess.Popen(cmd)
       p.wait()
+
+    def start_dnswatch(self, iface):
+      cmd = ["tcpdump","-i",iface,"-s0","-l","-t","-n","udp","port","53"]
+      p = subprocess.Popen(cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+      return p
 
     def create_hostapd_access_point(self, essid):
       print "[+] Creating (hostapd) AP %s"%_ctxt(essid,GREEN)
@@ -288,6 +311,9 @@ class Karma2:
   def get_unique_subnet(self):
     a = self.subnets.pop()
     return Karma2.IPSubnet("10.0.%d.%%d"%a)
+
+  def free_subnet(self, subnet):
+    self.subnets.add(subnet.base)
 
   def register_ap(self, essid, ap):
     self.aps[essid] = ap
