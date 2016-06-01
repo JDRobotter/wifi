@@ -134,9 +134,7 @@ class Karma2:
       print "[+] now running"
       while True:
 
-        # check timeout
-        if nclients == 0 and time.time() - self.activity_ts > self.timeout:
-          print "[x] No activity for essid",self.essid,"destroying AP"
+        def _killall():
           self.dhcpd_process.kill()
           self.dhcpd_process.wait()
           self.hostapd_process.kill()
@@ -146,6 +144,17 @@ class Karma2:
           self.karma.release_ap(self.essid)
           self.karma.ifhostapds.free_one(self.ifhostapd)
           self.karma.free_subnet(self.subnet)
+
+        # check alive
+        if self.activity_ts is None:
+          print "[x] Unable to create an AP for",self.essid
+          _killall()
+          return
+
+        # check timeout
+        if nclients == 0 and time.time() - self.activity_ts > self.timeout:
+          print "[x] No activity for essid",self.essid,"destroying AP"
+          _killall()
           return
 
         dhcpfd = self.dhcpd_process.stderr.fileno()
@@ -180,6 +189,13 @@ class Karma2:
             print "Client %s associated to %s"%(_ctxt(mac,GREEN),_ctxt(self.essid,GREEN))
 
             self.activity_ts = time.time()
+
+          m = re.match(r".*: Interface (\w+) wasn't started",line)
+          if m is not None:
+            ifname, = m.groups()
+            print "%s Unable to start hostapd on interface %s"%(_ctxt("[!]",RED),_ctxt(ifname,RED))
+            # will remove AP from list on next check
+            self.activity_ts = None
 
         if dnswfd in rlist:
           line = self.dnswatch_process.stdout.readline()
@@ -347,11 +363,6 @@ class Karma2:
   def start_webserver(self):
     ws = Karma2.Webserver()
     ws.start()
-
-def get_gw(interface):
-    for nw, nm, gw, iface, addr in read_routes():
-        if gw != "0.0.0.0":
-            return gw
 
 if __name__ == '__main__':
 
