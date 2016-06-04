@@ -8,6 +8,9 @@ from select import select
 import argparse
 from datetime import datetime
 import BaseHTTPServer
+import urllib2
+import json
+
 
 DEFAULT = '\033[49m\033[39m'
 RED = '\033[91m'
@@ -346,19 +349,33 @@ class Karma2:
     ap.start()
     self.register_ap(essid,ap)
 
-  def do_sniff(self):
-    def _filter(packet):
-      if packet.haslayer(Dot11ProbeReq):
-        section = packet[Dot11ProbeReq][Dot11Elt]
-        # SSID
-        if section.ID == 0 and section.info != '':
-          
-          if (not section.info in self.aps.keys()
-            and not section.info in self.FORBIDDEN_APS):
+  def process_probe(self, essid):
+    if (not essid in self.aps.keys()
+            and not essid in self.FORBIDDEN_APS):
+            self.create_ap(essid)
             
-            self.create_ap(section.info)
-    
-    sniff(prn=_filter,store=0)
+  def do_sniff(self):
+    if 'http' in self.ifmon:
+      while True:
+        try:
+          req = urllib2.Request("%s/status.json"%self.ifmon)
+          f = urllib2.urlopen(req)
+          data = f.read()
+          j =  json.loads(data)
+          for p in j['current']['probes']:
+            self.process_probe(p['essid'])
+        except Exception as e:
+          print e
+        time.sleep(1)
+    else:
+      def _filter(packet):
+        if packet.haslayer(Dot11ProbeReq):
+          section = packet[Dot11ProbeReq][Dot11Elt]
+          # SSID
+          if section.ID == 0 and section.info != '':
+            self.process_probe(section.info)
+      
+      sniff(prn=_filter,store=0)
 
   def start_webserver(self):
     ws = Karma2.Webserver()
