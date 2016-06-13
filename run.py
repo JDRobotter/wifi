@@ -332,7 +332,7 @@ class Karma2:
             continue
           # only show requests
           if "A?" in line or "AAAA?" in line or "CNAME" in line:
-            print "DNS: %s"%(_ctxt(line,RED))
+            print "DNS: %s"%(_ctxt(line.strip(),RED))
 
           self.activity_ts = time.time()
 
