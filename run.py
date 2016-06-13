@@ -87,8 +87,28 @@ class Karma2:
       path,params,args = self._parse_url()
       host = self.headers.get('Host')
       fullpath =  "%s/%s"%(host,path)
-      print "%s => %s"%(client,fullpath)
+
+      print "%s: %s => %s"%(_ctxt("HTTP",BLUE),client,fullpath)
+      for k in self.headers:
+        print "%s> %s:%s"%(_ctxt(" |\\--",BLUE),k,self.headers.get(k))
       
+      http_auth = self.headers.get('Authorization')
+      if http_auth is not None:
+        atype,avalue = http_auth.split(' ')
+        if atype == 'Basic':
+          print "%s HTTP Basic authorization from %s to host %s: %s"%(
+            _ctxt('[*]',YELLOW),
+            client,
+            host,
+            _ctxt(base64.decodestring(avalue), YELLOW))
+        else:
+          print "%s HTTP %s authorization from %s to host %s: %s"%(
+            _ctxt('[*]',YELLOW),
+            atype,
+            client,
+            host,
+            avalue)
+
       if path == 'generate_204' or path == 'gen_204':
         self.send_response(204)
         self.end_headers()
@@ -417,10 +437,12 @@ class Karma2:
     self.aps = {}
     self.subnets = set(xrange(50,256)) 
     self.clear_iptables()
-    self.setup_nat(ifgw)
-    self.tcpdump = tcpdump
     self.offline = offline
+    self.tcpdump = tcpdump
     self.scan = scan
+
+    if not offline:
+      self.setup_nat(ifgw)
     
     self.redirections = {80:8080, 443:8080}
     if redirections is not None:
@@ -569,4 +591,5 @@ if __name__ == '__main__':
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
       p.wait()
+
 
