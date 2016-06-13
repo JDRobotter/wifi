@@ -39,6 +39,7 @@ def parse_args():
     parser.add_argument("-o", "--offline", action='store_true', help="offline mode")
     parser.add_argument("-r", "--redirections", help="List of redirections (default is 80:8080,443:8080")
     parser.add_argument("-s", "--scan", action='store_true', help="run nmap on each new device")
+    parser.add_argument("-x", "--management", help="deploy a management AP on this interface")
     return parser.parse_args()
 
 class Karma2:
@@ -204,31 +205,42 @@ class Karma2:
       return self.base%200
 
   class AccessPoint(Thread):
-    def __init__(self, karma, ifhostapd, essid, bssid, timeout):
+    def __init__(self, karma, ifhostapd, essid, bssid, timeout, wpa2=None, fishing=True):
       Thread.__init__(self)
       self.essid = essid
       self.bssid = bssid
       self.karma = karma
       self.timeout = timeout
+      self.wpa2 = wpa2
       self.ifhostapd = ifhostapd
 
       self.activity_ts = time.time()
 
-      iface,self.hostapd_process = self.create_hostapd_access_point(essid, bssid)
+      iface,self.hostapd_process = self.create_hostapd_access_point(essid, bssid, wpa2)
       subnet = self.karma.get_unique_subnet()
       self.subnet = subnet
       self.setup_iface(iface,subnet)
-      # redirect the following ports
-      for sport, dport in self.karma.redirections.iteritems():
-        self.setup_redirections(iface,sport,dport)
-        
+
       self.dhcpd_process = self.start_dhcpd(iface,subnet)
-      self.dnswatch_process = self.start_dnswatch(iface)
+
       self.nmaps = []
+
       if self.karma.tcpdump:
         self.tcpdump_process = self.start_tcp_dump()
       else:
         self.tcpdump_process = None
+
+      if fishing:
+        # redirect the following ports
+        for sport, dport in self.karma.redirections.iteritems():
+          self.setup_redirections(iface,sport,dport)
+        
+        self.dnswatch_process = self.start_dnswatch(iface)
+        if self.karma.tcpdump:
+          self.start_tcp_dump()
+
+      else:
+        self.dnswatch_process = None
 
     def start_tcp_dump(self):
       logfile = "wifi-%s-%s.cap"%(self.essid,datetime.now().strftime("%Y%m%d-%H%M%S"))
@@ -249,11 +261,12 @@ class Karma2:
           self.dhcpd_process.wait()
           self.hostapd_process.kill()
           self.hostapd_process.wait()
-          self.dnswatch_process.kill()
-          self.dnswatch_process.wait()
           if self.tcpdump_process is not None:
             self.tcpdump_process.kill()
             self.tcpdump_process.wait()
+          if self.dnswatch_process is not None:
+            self.dnswatch_process.kill()
+            self.dnswatch_process.wait()
           
           for p in self.nmaps:
             p.kill()
@@ -275,11 +288,20 @@ class Karma2:
           _killall()
           return
 
+        files = []
+
         dhcpfd = self.dhcpd_process.stderr.fileno()
+        files.append(dhcpfd)
+
         airfd = self.hostapd_process.stdout.fileno()
-        dnswfd = self.dnswatch_process.stdout.fileno()
+        files.append(airfd)
+      
+        if self.dnswatch_process is not None:
+          dnswfd = self.dnswatch_process.stdout.fileno()
+          files.append(dnswfd)
+        else:
+          dnswfd = -1
         
-        files = [dhcpfd,airfd,dnswfd]
         nmapsd = []
         for n in self.nmaps:
           nmapsd.append(n.stdout.fileno())
@@ -404,7 +426,7 @@ class Karma2:
         stderr=subprocess.PIPE)
       return p
 
-    def create_hostapd_access_point(self, essid, bssid):
+    def create_hostapd_access_point(self, essid, bssid, wpa2):
       print "[+] Creating (hostapd) AP %s"%_ctxt(essid,GREEN)
 
       interface = self.ifhostapd.str()
@@ -416,6 +438,12 @@ class Karma2:
         f.write("bssid=%s\n"%(bssid))
       f.write("interface=%s\n"%(interface))
       f.write("channel=%s\n"%(channel))
+      if wpa2 is not None:
+        f.write("wpa=2\n")
+        f.write("wpa_passphrase=%s\n"%wpa2)
+        f.write("wpa_key_mgmt=WPA-PSK\n")
+        f.write("wpa_pairwise=CCMP\n")
+        f.write("rsn_pairwise=CCMP\n")
       f.close()
 
       cmd = ["hostapd","-d",f.name]
@@ -500,6 +528,16 @@ class Karma2:
   def release_ap(self, essid):
     self.aps.pop(essid)
 
+  def create_mgmt_ap(self, iface):
+    essid = "mgmt"
+    ap = self.AccessPoint(self, 
+      Karma2.WLANInterface(iface),
+      essid, None, 365*24*3600,
+      wpa2="glopglopglop",
+      fishing=False)
+    ap.daemon = True
+    ap.start()
+
   def create_ap(self, essid, bssid = None, timeout = 30):
     iface = self.ifhostapds.get_one()
     if iface is None:
@@ -553,7 +591,9 @@ if __name__ == '__main__':
 
   from distutils.spawn import find_executable
 
-  CHECK_EXECUTABLES = ('hostapd','nmap','iptables','tcpdump')
+  CHECK_EXECUTABLES = (
+    'hostapd','nmap','iptables','tcpdump','dnsmasq','airmon-ng',
+  )
 
   # check for executables
   do_not_run = False
@@ -616,5 +656,4 @@ if __name__ == '__main__':
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
       p.wait()
-
 
