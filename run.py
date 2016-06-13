@@ -150,11 +150,15 @@ class Karma2:
       self.ifs = [Karma2.WLANInterface(_if) for _if in ifs]
 
     def get_one(self):
-      for iface in self.ifs:
-        if iface.available:
-          iface.available = False
-          return iface
-      return None
+      ifs = filter(lambda iface:iface.available, self.ifs)
+
+      if len(ifs) == 0:
+        return None
+
+      iface = random.choice(ifs)
+
+      iface.available = False
+      return iface
 
     def free_one(self, _iface):
       for iface in self.ifs:
@@ -516,9 +520,21 @@ if __name__ == '__main__':
 
   args = parse_args()
   if args.enable is not None:
-    cmd = "airmon-ng start %s"%args.enable
-    subprocess.Popen(cmd)
- 
+    cmd = ['airmon-ng','start',args.enable]
+    p = subprocess.Popen(cmd,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE)
+
+    print "[+] Starting monitor mode on %s"%args.enable
+    p.wait()
+
+    lines = p.stdout.read()
+    m = re.match(r".*monitor mode enabled on (\w+).*", lines, re.S)
+    if m is not None:
+      iface, = m.groups()
+      print "[+] Monitor interface %s created"%iface
+      args.monitor = iface
+
   args.hostapds = args.hostapds.split(',')
 
   km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan)
