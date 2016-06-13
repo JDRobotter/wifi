@@ -535,24 +535,38 @@ if __name__ == '__main__':
       print "[+] Monitor interface %s created"%iface
       args.monitor = iface
 
-  args.hostapds = args.hostapds.split(',')
+  try:
+    args.hostapds = args.hostapds.split(',')
 
-  km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan)
+    km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan)
 
-  if args.offline:
-    km.start_webserver(km.redirections[80])
+    if args.offline:
+      km.start_webserver(km.redirections[80])
 
-  if args.name is not None:
-    # 24h timeout
-    essid = args.name.split(',')[0]
-    bssid = None
-    try:
-      bssid = args.name.split(',')[1]
-    except:
-      pass
-    km.create_ap(essid, bssid, 60*60*24)
-  else:
-    km.do_sniff()
+    if args.name is not None:
+      # 24h timeout
+      essid = args.name.split(',')[0]
+      bssid = None
+      try:
+        bssid = args.name.split(',')[1]
+      except:
+        pass
+      km.create_ap(essid, bssid, 60*60*24)
+    else:
+      km.do_sniff()
 
-  while True:
-    time.sleep(1)
+    while True:
+      time.sleep(1)
+
+  except KeyboardInterrupt:
+    pass
+  finally:
+
+    if args.enable is not None:
+      print "[+] Stopping monitor interface %s properly"%args.monitor
+      cmd = ['airmon-ng','stop',args.monitor]
+      p = subprocess.Popen(cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+      p.wait()
+
