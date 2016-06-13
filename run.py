@@ -546,8 +546,25 @@ class Karma2:
     ws = Karma2.Webserver(port)
     ws.start()
 
+
+
 if __name__ == '__main__':
 
+
+  from distutils.spawn import find_executable
+
+  CHECK_EXECUTABLES = ('hostapd','nmap','iptables','tcpdump')
+
+  # check for executables
+  do_not_run = False
+  for exe in CHECK_EXECUTABLES:
+    if find_executable(exe) is None:
+      print "[x] %s does not seems to be installed (and needed)"%_ctxt(exe, RED)
+      do_not_run = True
+  if do_not_run:
+    sys.exit(-1)
+
+  # parse command line
   args = parse_args()
   if args.enable is not None:
     cmd = ['airmon-ng','start',args.enable]
