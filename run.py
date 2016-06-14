@@ -226,14 +226,19 @@ class Karma2:
       self.dnswatch_process = self.start_dnswatch(iface)
       self.nmaps = []
       if self.karma.tcpdump:
-        self.start_tcp_dump()
+        self.tcpdump_process = self.start_tcp_dump()
+      else:
+        self.tcpdump_process = None
 
     def start_tcp_dump(self):
       logfile = "wifi-%s-%s.cap"%(self.essid,datetime.now().strftime("%Y%m%d-%H%M%S"))
       print "[+] Starting tcpdump %s"%logfile
       cmd = ['tcpdump','-i', self.ifhostapd.str(), '-w', logfile]
-      p = subprocess.Popen(cmd)
-    
+      p = subprocess.Popen(cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+      return p
+
     def run(self):
       nclients = 0
       print "[+] now running"
@@ -246,6 +251,9 @@ class Karma2:
           self.hostapd_process.wait()
           self.dnswatch_process.kill()
           self.dnswatch_process.wait()
+          if self.tcpdump_process is not None:
+            self.tcpdump_process.kill()
+            self.tcpdump_process.wait()
           
           for p in self.nmaps:
             p.kill()
