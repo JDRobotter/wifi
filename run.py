@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 from threading import Lock,Thread
 import time,random,re,tempfile
 import subprocess
@@ -40,6 +41,7 @@ def parse_args():
     parser.add_argument("-r", "--redirections", help="List of redirections (default is 80:8080,443:8080")
     parser.add_argument("-s", "--scan", action='store_true', help="run nmap on each new device")
     parser.add_argument("-x", "--management", help="deploy a management AP on this interface")
+    parser.add_argument("-d", "--debug", action='store_true', help="debug mode")
     return parser.parse_args()
 
 class Karma2:
@@ -213,8 +215,10 @@ class Karma2:
       self.timeout = timeout
       self.wpa2 = wpa2
       self.ifhostapd = ifhostapd
-
+      self.nclients = 0
+      self.unused = True
       self.activity_ts = time.time()
+      self.logfile = None
 
       iface,self.hostapd_process = self.create_hostapd_access_point(essid, bssid, wpa2)
       subnet = self.karma.get_unique_subnet()
@@ -243,16 +247,15 @@ class Karma2:
         self.dnswatch_process = None
 
     def start_tcp_dump(self):
-      logfile = "wifi-%s-%s.cap"%(self.essid,datetime.now().strftime("%Y%m%d-%H%M%S"))
-      print "[+] Starting tcpdump %s"%logfile
-      cmd = ['tcpdump','-i', self.ifhostapd.str(), '-w', logfile]
+      self.logfile = "wifi-%s-%s.cap"%(self.essid,datetime.now().strftime("%Y%m%d-%H%M%S"))
+      print "[+] Starting tcpdump %s"%self.logfile
+      cmd = ['tcpdump','-i', self.ifhostapd.str(), '-w', self.logfile]
       p = subprocess.Popen(cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
       return p
 
     def run(self):
-      nclients = 0
       print "[+] now running"
       while True:
 
@@ -264,6 +267,13 @@ class Karma2:
           if self.tcpdump_process is not None:
             self.tcpdump_process.kill()
             self.tcpdump_process.wait()
+            if self.karma.tcpdump and self.unused and not self.karma.debug:
+              try:
+                print "[-] deleteting %s"%self.logfile
+                os.remove(self.logfile)
+              except:
+                print "%s error deleteting %s"%((_ctxt("[!]",RED)), self.logfile)
+                pass
           if self.dnswatch_process is not None:
             self.dnswatch_process.kill()
             self.dnswatch_process.wait()
@@ -278,12 +288,12 @@ class Karma2:
 
         # check alive
         if self.activity_ts is None:
-          print "[x] Unable to create an AP for",self.essid
+          print "%s Unable to create an AP for",((_ctxt("[!]",RED)),self.essid)
           _killall()
           return
 
         # check timeout
-        if nclients == 0 and time.time() - self.activity_ts > self.timeout:
+        if self.nclients == 0 and time.time() - self.activity_ts > self.timeout:
           print "[x] No activity for essid",self.essid,"destroying AP"
           _killall()
           return
@@ -330,13 +340,14 @@ class Karma2:
                 self.nmaps.append(self.nmap(ip))
               except:
                 print "%s Unable to start nmap %s"%(_ctxt("[!]",RED))
-            nclients += 1
+            self.nclients += 1
+            self.unused = False
           m = re.match(
             r".*([a-zA-Z0-9:]+)*disassociated due to inactivity*",line)
           if m is not None:
             mac = m.groups()
             print "dissociated %s"%mac
-            nclients -= 1
+            self.nclients -= 1
 
         if airfd in rlist:
           line = self.hostapd_process.stdout.readline()
@@ -466,7 +477,7 @@ class Karma2:
           iface, = m.groups()
           return iface,p
 
-  def __init__(self, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None, redirections = None, offline = False, scan = False):
+  def __init__(self, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None, redirections = None, offline = False, scan = False, debug = False):
     self.ifmon = ifmon
     self.ifgw = ifgw
     self.ifhostapds = Karma2.WLANInterfaces(ifhostapds)
@@ -476,6 +487,7 @@ class Karma2:
     self.offline = offline
     self.tcpdump = tcpdump
     self.scan = scan
+    self.debug = debug
 
     if not offline:
       self.setup_nat(ifgw)
@@ -569,7 +581,7 @@ class Karma2:
             self.process_probe(p['essid'], bssid)
         except Exception as e:
           print "Probes %s"%e
-        time.sleep(1)
+        time.sleep(0.5)
     else:
       def _filter(packet):
         if packet.haslayer(Dot11ProbeReq):
@@ -625,7 +637,7 @@ if __name__ == '__main__':
   try:
     args.hostapds = args.hostapds.split(',')
 
-    km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan)
+    km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan, args.debug)
 
     if args.offline:
       km.start_webserver(km.redirections[80])
