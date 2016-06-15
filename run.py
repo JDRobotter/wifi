@@ -288,7 +288,7 @@ class Karma2:
 
         # check alive
         if self.activity_ts is None:
-          print "%s Unable to create an AP for",((_ctxt("[!]",RED)),self.essid)
+          print "%s Unable to create an AP for %s",(_ctxt("[!]",RED),self.essid)
           _killall()
           return
 
@@ -578,7 +578,13 @@ class Karma2:
               bssid = p['ap'][0]['bssid']
             except:
               pass
-            self.process_probe(p['essid'], bssid)
+            found = False
+            for w in j['current']['wifis']:
+              if p['essid'] == w['essid']:
+                found = True
+                break
+            if not found:
+              self.process_probe(p['essid'], bssid)
         except Exception as e:
           print "Probes %s"%e
         time.sleep(0.5)
