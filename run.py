@@ -288,7 +288,7 @@ class Karma2:
 
         # check alive
         if self.activity_ts is None:
-          print "%s Unable to create an AP for %s",(_ctxt("[!]",RED),self.essid)
+          print "%s Unable to create an AP for %s"%(_ctxt("[!]",RED),self.essid)
           _killall()
           return
 
@@ -330,6 +330,14 @@ class Karma2:
           line = self.dhcpd_process.stderr.readline()
           if len(line) == 0:
             continue
+          
+          m = re.match(
+            r".*failed.*", line)
+          if m is not None:
+            print "%s %s"%(_ctxt("[!]",RED), line)
+            _killall()
+            return
+          
           m = re.match(
             r".*DHCPACK\(\w+\) ([0-9\.]+) ([a-zA-Z0-9:]+) ([\w-]+).*",line)
           if m is not None:
@@ -409,7 +417,9 @@ class Karma2:
       print "[+] Starting dhcp server %s %s"%(iface,subnet.range())
       cmd = ['dnsmasq',
         '-d',
+        #'--log-dhcp',
         '--bind-dynamic',
+        '--log-facility=-',
         '-i', iface,
         '-F', '%s,%s'%(subnet.range_lower(),subnet.range_upper()),
         '--dhcp-option=option:router,%s'%(subnet.gateway()),
@@ -449,6 +459,9 @@ class Karma2:
         f.write("bssid=%s\n"%(bssid))
       f.write("interface=%s\n"%(interface))
       f.write("channel=%s\n"%(channel))
+      f.write("logger_stdout=-1\n")
+      f.write("logger_stdout_level=0")
+      #f.write("ignore_broadcast_ssid=1")
       if wpa2 is not None:
         f.write("wpa=2\n")
         f.write("wpa_passphrase=%s\n"%wpa2)
