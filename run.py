@@ -468,7 +468,8 @@ class Karma2:
       
 
     def setup_redirections(self, iface, inport, outport):
-      print "[+] Setting up (%s) %d to %d redirection"%(iface,inport,outport)
+      if self.karma.debug:
+        print "[+] Setting up (%s) %d to %d redirection"%(iface,inport,outport)
       cmd = ['iptables',
         '-t', 'nat',
         '-A', 'PREROUTING',
@@ -572,6 +573,7 @@ class Karma2:
     self.scan = scan
     self.debug = debug
     self.uri = uri
+    self.locals_interfaces = self.getWirelessInterfacesList()
 
     if not offline:
       self.setup_nat(ifgw)
@@ -667,7 +669,20 @@ class Karma2:
     if (not essid in self.aps.keys()
             and not essid in self.FORBIDDEN_APS):
             self.create_ap(essid, bssid)
-            
+  
+  def getWirelessInterfacesList(self):
+    networkInterfaces=[]		
+    command = ["iwconfig"]
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process.wait()
+    (stdoutdata, stderrdata) = process.communicate();
+    output = stdoutdata
+    lines = output.splitlines()
+    for line in lines:
+      if(line.find("IEEE 802.11")!=-1):
+        networkInterfaces.append(line.split()[0])
+    return networkInterfaces
+  
   def do_sniff(self):
     if 'http' in self.ifmon:
       while True:
@@ -688,7 +703,8 @@ class Karma2:
                 found = True
                 break
             if not found:
-              self.process_probe(p['essid'], bssid)
+              if not p['bssid'] in self.locals_interfaces:
+                self.process_probe(p['essid'], bssid)
         except Exception as e:
           print "Probes %s"%e
         time.sleep(0.5)
