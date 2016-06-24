@@ -73,7 +73,6 @@ class Karma2:
     daemon=True
     def __init__(self, app, port = 80):
       Thread.__init__(self)
-      self.PRE="HTTP"
       self.app = app
       self.port = port
 
@@ -84,6 +83,7 @@ class Karma2:
       handler_class=Karma2.HTTPRequestHandler
       server_address = ('', self.port)
       httpd = server_class(server_address, self.app, handler_class)
+      httpd.PRE = "HTTP"
       httpd.serve_forever()
 
   class SSLWebserver(Webserver):
@@ -98,6 +98,7 @@ class Karma2:
       handler_class=Karma2.HTTPRequestHandler
       server_address = ('', self.port)
       httpd = server_class(server_address, self.app, handler_class)
+      httpd.PRE = "HTTPS"
       httpd.socket = ssl.wrap_socket(httpd.socket, keyfile='./key.pem', certfile='./cert.pem', server_side=True)
       httpd.serve_forever()
 
@@ -107,6 +108,7 @@ class Karma2:
     def __init__(self, server_address, app, RequestHandlerClass, bind_and_activate=True):
       BaseHTTPServer.HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
       self.app = app
+      self.PRE = ''
 
   class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     
@@ -143,8 +145,11 @@ class Karma2:
         essid = self.server.app.get_client_ap(client).essid
       except:
         pass
-
-      log( "%s %s: %s => %s"%(essid,_ctxt("HTTP",BLUE),client,fullpath) )
+      
+      protocol = _ctxt(self.server.PRE,BLUE)
+      if self.server.PRE == 'HTTPS':
+        protocol = _ctxt(self.server.PRE,RED)
+      log( "%s %s: %s => %s"%(essid,protocol,client,fullpath) )
       for k in self.headers:
         log( "%s> %s:%s"%(_ctxt(" |\\--",BLUE),k,self.headers.get(k)) )
       
@@ -169,14 +174,14 @@ class Karma2:
             host,
             http_auth))
 
-      if path == 'generate_204' or path == 'gen_204':
+      if path == 'generate_204' or path == 'gen_204' or path == 'mobile/status.php':
         self.send_response(204)
         self.end_headers()
       elif path == 'ncsi.txt':
         self.send_response(200)
         self.end_headers()
         self.wfile.write('Microsoft NCSI')
-      elif path == 'hotspot-detect.html':
+      elif path == 'hotspot-detect.html' or path == 'library/test/success.html':
         data = '''<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
   <head>
