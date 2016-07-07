@@ -667,6 +667,8 @@ class Karma2:
           return m
   
   def update_dns(self, dns):
+    if self.uri is None:
+      return
     try:
       req = urllib2.Request('%s/users.json'%self.uri)
       req.add_header('Content-Type', 'application/json')
