@@ -47,6 +47,27 @@ def get_title():
   return prctl_get_name()
 
 
+class LineReader(object):
+
+  def __init__(self, fd):
+    self._fd = fd
+    self._buf = ''
+
+  def fileno(self):
+    return self._fd
+
+  def readlines(self):
+    data = os.read(self._fd, 4096)
+    if not data:
+        # EOF
+        return None
+    self._buf += data
+    if '\n' not in data:
+        return []
+    tmp = self._buf.split('\n')
+    lines, self._buf = tmp[:-1], tmp[-1]
+    return lines
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--gateway", help="Choose the router IP address. Example: -g 192.168.0.1")
@@ -377,7 +398,7 @@ class Karma2:
               log( "%s could not kill tcpdump"%_ctxt("[!]",RED))
             if self.karma.tcpdump and self.unused and not self.karma.debug:
               try:
-                log( "[-] deleteting %s"%self.logfile)
+                log( "[-] deleting %s"%self.logfile)
                 os.remove(self.logfile)
               except:
                 log( "%s error deleteting %s"%((_ctxt("[!]",RED)), self.logfile))
@@ -398,9 +419,17 @@ class Karma2:
             pass
           self.karma.ifhostapds.free_one(self.ifhostapd)
           self.karma.free_subnet(self.subnet)
-      tests = ""
+          
+      #precompile regexp
+      dhcp_failed_re = re.compile(r".*failed.*\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b")
+      dhcpack_re = re.compile(r".*DHCPACK\(\w+\) ([0-9\.]+) ([a-zA-Z0-9:]+) ([\w-]+).*")
+      disassociated_re = re.compile(r".*([a-zA-Z0-9:]+)*disassociated due to inactivity*")
+      authenticated_re = re.compile(r".*: STA ([a-zA-Z0-9:]+) IEEE 802.11: authenticated")
+      hostapd_fails_re = re.compile(r".*: Interface (\w+) wasn't started")
+      cname_watch_re = re.compile(r".* > (\w+:\w+:\w+:\w+:\w+:\w+).*CNAME*\s([a-z0-9-\.]+)\..*")
+      aaaa_watch_re = re.compile(r"(\w+:\w+:\w+:\w+:\w+:\w+) >.*length \d+:\s([0-9\.]+)\.\d+.*A\?*\s([a-z0-9-\.]+)\..*")
+      hostapd_error = ""
       while True:
-
         # check alive
         if self.activity_ts is None:
           log( "%s Unable to create an AP for %s"%(_ctxt("[!]",RED),self.essid))
@@ -421,7 +450,6 @@ class Karma2:
         airfd = self.hostapd_process.stdout.fileno()
         files.append(airfd)
       
-        dnswfd = -1
         if self.dnswatch_process is not None:
           dnswfd = self.dnswatch_process.stdout.fileno()
           files.append(dnswfd)
@@ -441,83 +469,84 @@ class Karma2:
           #i += 1
           
         if dhcpfd in rlist:
-          line = self.dhcpd_process.stderr.readline()
-          if len(line) == 0:
-              continue
-          #print line
-          m = re.match(
-            r".*failed.*\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", line)
-          if m is not None:
-            log( "%s %s"%(_ctxt("[!]",RED), line))
-            _killall()
-          else:
-            m = re.match(
-              r".*DHCPACK\(\w+\) ([0-9\.]+) ([a-zA-Z0-9:]+) ([\w-]+).*",line)
-            if m is not None:
-              ip,mac,name = m.groups()
-              self.register_client(mac, ip, name)
-            else:
-              m = re.match(
-                r".*([a-zA-Z0-9:]+)*disassociated due to inactivity*",line)
+          lr = LineReader(self.dhcpd_process.stderr.fileno())
+          lines = lr.readlines()
+          for line in lines:
+            if len(line) != 0:
+              #print "dnsmasq  %s"%line
+              m = dhcp_failed_re.match(line)
               if m is not None:
-                mac = m.groups()
-                log( "dissociated %s"%mac)
-                self.clients.pop(mac,None)
+                log( "%s %s"%(_ctxt("[!]",RED), line))
+                _killall()
+                return
+              else:
+                m = dhcpack_re.match(line)
+                if m is not None:
+                  ip,mac,name = m.groups()
+                  self.register_client(mac, ip, name)
+                #else:
+                  # this regexp seems to be really slow
+                  #m = disassociated_re.match(line)
+                  #print "000022"
+                  #if m is not None:
+                    #mac = m.groups()
+                    #log( "dissociated %s"%mac)
+                    #self.clients.pop(mac,None)
 
         if airfd in rlist:
-          line = self.hostapd_process.stdout.readline()
-          if len(line) == 0:
-            continue
-          tests = "%s%s"%(tests,line)
-          #print line
-          m = re.match(r".*: STA ([a-zA-Z0-9:]+) IEEE 802.11: authenticated",line)
-          if m is not None:
-            mac, = m.groups()
-            if not self.clients.has_key(mac):
-              log( "Client %s associated to %s"%(_ctxt(mac,GREEN),_ctxt(self.essid,GREEN)))
+          lr = LineReader(self.hostapd_process.stdout.fileno())
+          lines = lr.readlines()
+          for line in lines:
+            if len(line) != 0:
+              hostapd_error = "%s%s"%(hostapd_error,line)
+              #print "hostapd  %s"%line
+              m = authenticated_re.match(line)
+              if m is not None:
+                mac, = m.groups()
+                if not self.clients.has_key(mac):
+                  log( "Client %s associated to %s"%(_ctxt(mac,GREEN),_ctxt(self.essid,GREEN)))
 
-            self.activity_ts = time.time()
-          else:
-            m = re.match(r".*: Interface (\w+) wasn't started",line)
-            if m is not None:
-              ifname, = m.groups()
-              log( "%s Unable to start hostapd on interface %s: %s"%(_ctxt("[!]",RED),_ctxt(ifname,RED), line))
-              # will remove AP from list on next check
-              self.activity_ts = None  
-              print tests
+                self.activity_ts = time.time()
+              else:
+                m = hostapd_fails_re.match(line)
+                if m is not None:
+                  ifname, = m.groups()
+                  log( "%s Unable to start hostapd on interface %s: %s"%(_ctxt("[!]",RED),_ctxt(ifname,RED), line))
+                  # will remove AP from list on next check
+                  self.activity_ts = None  
+                  if self.karma.debug:
+                    print hostapd_error
 
         if dnswfd in rlist:
-          line = self.dnswatch_process.stdout.readline()
-          if len(line) == 0:
-            continue
-          dns = {}
-          # only show requests
-          if "CNAME" in line:
-            m = re.match(
-            r".* > (\w+:\w+:\w+:\w+:\w+:\w+).*CNAME*\s([a-z0-9-\.]+)\..*",line)
-            if m is not None:
-              mac,host = m.groups()
-              dns = {
-                'bssid': mac,
-                'host': host
-                }
-          else:
-            if "AAAA?" in line or "A?" in line:
-              m = re.match(
-              r"(\w+:\w+:\w+:\w+:\w+:\w+) >.*length \d+:\s([0-9\.]+)\.\d+.*A\?*\s([a-z0-9-\.]+)\..*",line)
-              if m is not None:
-                mac, ip, host = m.groups()
-                dns = {
-                  'bssid': mac,
-                  'host': host
-                  }
-                self.register_client(mac,ip)
-          if dns != {}: 
-            if self.karma.update_dns(dns):
-              log( "[+] %s => %s"%(dns['bssid'], dns['host']))
-
-          self.activity_ts = time.time()
-        time.sleep(0.005)
+          lr = LineReader(self.dnswatch_process.stderr.fileno())
+          lines = lr.readlines()
+          for line in lines:
+            if len(line) != 0:
+              #print "dnswatch %s"%line
+              dns = {}
+              # only show requests
+              if "CNAME" in line:
+                m = cname_watch_re.match(line)
+                if m is not None:
+                  mac,host = m.groups()
+                  dns = {
+                    'bssid': mac,
+                    'host': host
+                    }
+              else:
+                if "AAAA?" in line or "A?" in line:
+                  m = aaaa_watch_re.match(line)
+                  if m is not None:
+                    mac, ip, host = m.groups()
+                    dns = {
+                      'bssid': mac,
+                      'host': host
+                      }
+                    self.register_client(mac,ip)
+              if dns != {}: 
+                if self.karma.update_dns(dns):
+                  log( "[+] %s => %s"%(dns['bssid'], dns['host']))
+            self.activity_ts = time.time()
 
     def nmap(self, ip):
       log( "[+] nmapping %s"%ip)
