@@ -102,9 +102,13 @@ class Karma2:
     
     def run(self):
       set_title('SambaCrawler %s'%self.ip)
-      
+      log("Samba: crawling %s"%self.ip)
       cmd = ['smbclient','//%s/'%self.ip, '-N', '-L', self.ip]
-      out = subprocess.check_output(cmd)
+      try:
+        out = subprocess.check_output(cmd)
+      except:
+        log("Samba: no samba shares on %s"%self.ip)
+        return
       res = re.findall("\s(.*)\sDisk",out)
       if res is not None:
         os.mkdir(self.dest)
@@ -791,7 +795,7 @@ class Karma2:
           for p in j['current']['probes']:
             bssid = None
             try:
-              bssid = p['ap'][0]['bssid']
+              bssid = p['ap'][0][0]
             except:
               pass
             found = False
@@ -825,7 +829,7 @@ class Karma2:
   def status(self, signum, stack):
     print "==========="
     for essid,ap in self.aps.iteritems():
-      print "%s => %s (%s), inactive for %ss/%ss"%(ap.ifhostapd.iface, ap.essid, len(ap.clients), int((time.time() - ap.activity_ts), int(ap.timeout)))
+      print "%s => %s (%s), inactive for %ss/%ss"%(ap.ifhostapd.iface, ap.essid, len(ap.clients), (time.time() - ap.activity_ts, ap.timeout))
       for mac,ip in ap.clients.iteritems():
         print "\t%s => %s"%(mac,ip)
 
