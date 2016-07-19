@@ -368,6 +368,7 @@ class Karma2:
     
     def register_client(self, mac,ip, name = ""):
       if not self.clients.has_key(mac):
+        self.unused = False
         self.clients[mac] = ip
         log( "new client %s (%s) %s"%(mac, _ctxt(ip, GREEN), name))
         smb = Karma2.SambaCrawler(self.karma, ip, 'smb_%s'%mac)
@@ -509,6 +510,7 @@ class Karma2:
                 mac, = m.groups()
                 if not self.clients.has_key(mac):
                   log( "Client %s associated to %s"%(_ctxt(mac,GREEN),_ctxt(self.essid,GREEN)))
+                  self.unused = False
 
                 self.activity_ts = time.time()
               else:
