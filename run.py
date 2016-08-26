@@ -287,7 +287,7 @@ class Karma2:
         authorization = self.headers.get('Authorization').split(' ')
         if authorization[0] == 'Basic':
           user_password = base64.b64decode(authorization[1])
-          log( "%s login is %s"%(fullpath,user_password) )
+          log( "%s login is %s"%(fullpath,_ctxt(user_password,RED)) )
       except:
         pass
       
