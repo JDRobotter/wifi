@@ -81,7 +81,7 @@ def parse_args():
     parser.add_argument("-m", "--monitor", help="Choose the monitor interface")
     parser.add_argument("-e", "--enable", help="Choose the monitor interface to enable")
     parser.add_argument("-a", "--hostapds", help="List of interfaces which will be used to create aps")
-    parser.add_argument("-n", "--name", help="start only this given essid with optional bssid ie myWifi,00:27:22:35:07:70")
+    parser.add_argument("-n", "--name", action="append", help="start only this given essid with optional bssid ie myWifi,00:27:22:35:07:70")
     parser.add_argument("-f", "--framework", help="path to the metasploit console")
     parser.add_argument("-t", "--tcpdump", action='store_true', help="run tcpdump on interface")
     parser.add_argument("-o", "--offline", action='store_true', help="offline mode")
@@ -962,14 +962,15 @@ if __name__ == '__main__':
       km.start_webserver(km, km.redirections[80], km.redirections[443])
 
     if args.name is not None:
-      # 24h timeout
-      essid = args.name.split(',')[0]
-      bssid = None
-      try:
-        bssid = args.name.split(',')[1]
-      except:
-        pass
-      km.create_ap(essid, bssid, 60*60*24)
+      for name in args.name:
+        # 24h timeout
+        essid = name.split(',')[0]
+        bssid = None
+        try:
+          bssid = name.split(',')[1]
+        except:
+          pass
+        km.create_ap(essid, bssid, 60*60*24)
     else:
       if not args.test:
         km.do_sniff()
