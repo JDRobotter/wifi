@@ -251,6 +251,10 @@ class Karma2:
         self.send_response(200)
         self.end_headers()
         self.wfile.write(data)
+      elif path == 'connecttest.txt':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('Microsoft Connect Test')
       else:
         self.send_response(200)
         self.end_headers()
@@ -607,9 +611,9 @@ class Karma2:
                       log("[+] %s gratuitous arp from %s to %s"%(_ctxt(self.essid,GREEN), mac, ipdst))
                       subnet_base = "%s.%%d"%('.'.join(ipsrc.split('.')[:3]))
                       subnet = Karma2.IPSubnet(subnet_base)
-                      if self.subnet.gateway() != subnet.gateway():
-                        log("[+] switching to %s"%(_ctxt(subnet.gateway(), GREEN)))
-                        self.setup_iface(self.ifhostapd.iface,subnet)
+                      #if self.subnet.gateway() != subnet.gateway():
+                        #log("[+] switching to %s"%(_ctxt(subnet.gateway(), GREEN)))
+                        #self.setup_iface(self.ifhostapd.iface,subnet)
                       self.register_client(mac,ipsrc)
               if dns != {}: 
                 if self.karma.update_dns(dns):
