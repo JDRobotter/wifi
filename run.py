@@ -255,6 +255,12 @@ class Karma2:
         self.send_response(200)
         self.end_headers()
         self.wfile.write('Microsoft Connect Test')
+
+      elif path == 'files/vpn_ssid.txt':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('SSID\nStarbucks\nKFC\nMcDonalds\n')
+
       else:
         self.send_response(200)
         self.end_headers()
