@@ -144,6 +144,7 @@ class Karma2:
       httpd = server_class(server_address, self.app, handler_class)
       httpd.PRE = "HTTP"
       httpd.serve_forever()
+      print "server on",self.port," is shutting down"
 
   class SSLWebserver(Webserver):
     def __init__(self, app, port = 443):
@@ -160,6 +161,7 @@ class Karma2:
       httpd.PRE = "HTTPS"
       httpd.socket = ssl.wrap_socket(httpd.socket, keyfile=KEYFILE, certfile=CERTFILE, server_side=True)
       httpd.serve_forever()
+      print "server on",self.port," is shutting down"
 
   class HTTPServer(BaseHTTPServer.HTTPServer):
     allow_reuse_address = True
