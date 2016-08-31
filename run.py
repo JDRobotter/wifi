@@ -263,7 +263,23 @@ class Karma2:
         self.end_headers()
         self.wfile.write('SSID\nStarbucks\nKFC\nMcDonalds\n')
 
+      elif path == 'files/emupdate/pong.txt':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('1')
+
+      elif path == 'data/config_cleanmaster_version.json':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('{"errno":"0","data":{"kbd":"%d"}}'%int(time.time()))
+
+      elif host == 'captive.apple.com':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>')
+
       else:
+        log("(%s)"%_ctxt("default",YELLOW))
         self.send_response(200)
         self.end_headers()
 
