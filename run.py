@@ -200,7 +200,7 @@ class Karma2:
         'host': host
         }
       self.server.app.update_dns(dns)
-      fullpath =  "%s/%s"%(host,path)
+      fullpath =  "%s%s"%(host,self.path)
       essid = ""
       try:
         essid = self.server.app.get_client_ap(client).essid
