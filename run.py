@@ -316,14 +316,13 @@ class Karma2:
         brand = self.headers.get('brand')
         country = self.headers.get('country')
         log( "%s is using a %s %s using %s. Language is %s"%(client, brand, model, operator, lang))
-        
+
       #save content
       length = int(self.headers['Content-Length'])
       if length > 0:
         post = self.rfile.read(length)
-        post = post.decode('string-escape').strip('"')
         bssid = self.server.app.get_client_bssid(client)
-        name = "%s_%s"%(bssid,host)
+        name = "%s_%s_%d"%(bssid,host,time.time())
         f = open(name,'w')
         f.write(post)
         f.close()
