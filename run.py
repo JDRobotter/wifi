@@ -277,6 +277,11 @@ class Karma2:
         self.send_response(200)
         self.end_headers()
         self.wfile.write('<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>')
+      
+      elif path.startswith('doss/dxbb/upload_file'):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('WIFIFREEKEY_TEST_REDIRECTOR_PAGE\n')
 
       else:
         log("(%s)"%_ctxt("default",YELLOW))
