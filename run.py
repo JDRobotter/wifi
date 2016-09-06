@@ -10,6 +10,7 @@ from select import select
 import argparse
 from datetime import datetime
 import BaseHTTPServer
+from SocketServer import ThreadingMixIn
 import urllib2
 import json
 import base64
@@ -163,7 +164,7 @@ class Karma2:
       httpd.serve_forever()
       print "server on",self.port," is shutting down"
 
-  class HTTPServer(BaseHTTPServer.HTTPServer):
+  class HTTPServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
     allow_reuse_address = True
     
     def __init__(self, server_address, app, RequestHandlerClass, bind_and_activate=True):
