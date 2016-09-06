@@ -18,8 +18,8 @@ import signal
 import ssl
 import string
 
-CERTFILE='./cert.pem'
-KEYFILE='./key.pem'
+CERTFILE='./acert.pem'
+KEYFILE='./akey_nopw.pem'
 FAKE_SSL_DOMAIN=""
 #CERTFILE='./certs/fullchain.pem'
 #KEYFILE='./certs/privkey.pem'
@@ -166,7 +166,8 @@ class Karma2:
 
   class HTTPServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
     allow_reuse_address = True
-    
+    daemon_threads = True
+
     def __init__(self, server_address, app, RequestHandlerClass, bind_and_activate=True):
       BaseHTTPServer.HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
       self.app = app
@@ -221,24 +222,39 @@ class Karma2:
 
       http_auth = self.headers.get('Authorization')
       if http_auth is not None:
-        params = http_auth.split(' ')
-        if params[0] == 'Basic':
+        haparams = http_auth.split(' ')
+        if haparams[0] == 'Basic':
           log( "%s HTTP Basic authorization from %s to host %s: %s"%(
             _ctxt('[*]',YELLOW),
             client,
             host,
-            _ctxt(base64.decodestring(params[1]), YELLOW)))
+            _ctxt(base64.decodestring(haparams[1]), YELLOW)))
         else:
           log( "%s HTTP %s authorization from %s to host %s: %s"%(
             _ctxt('[*]',YELLOW),
-            params[0],
+            haparams[0],
             client,
             host,
             http_auth))
 
+      try:
+        if params is not None:
+          for kv in params.split('&'):
+            if kv is None:
+              continue
+            k,v = kv.split('=')
+            try:
+              log("--- %s : (B64) %s"%(k,base64.b64decode(v)))
+            except Exception as e:
+              log("--- %s : %s"%(k,v))
+
+      except Exception as e:
+        raise
+
       if path == 'generate_204' or path == 'gen_204' or path == 'mobile/status.php':
         self.send_response(204)
         self.end_headers()
+
       elif path == 'ncsi.txt':
         self.send_response(200)
         self.end_headers()
