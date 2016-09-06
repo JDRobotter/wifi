@@ -244,7 +244,10 @@ class Karma2:
               continue
             k,v = kv.split('=')
             try:
-              log("--- %s : (B64) %s"%(k,base64.b64decode(v)))
+              s = base64.b64decode(v)
+              # try to decode as utf8, do not use decoded string
+              s.decode('utf8')
+              log("--- %s : %s (B64: %s)"%(k,v,s))
             except Exception as e:
               log("--- %s : %s"%(k,v))
 
