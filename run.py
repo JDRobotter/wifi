@@ -303,6 +303,11 @@ class Karma2:
         self.end_headers()
         self.wfile.write('WIFIFREEKEY_TEST_REDIRECTOR_PAGE\n')
 
+      elif path == 'dot/wifiinfo':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('{"retcode":0}\n')
+
       elif "mail" in path or "mail" in host:
         self.send_response(200)
         self.end_headers()
