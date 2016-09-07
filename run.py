@@ -18,8 +18,8 @@ import signal
 import ssl
 import string
 
-CERTFILE='./acert.pem'
-KEYFILE='./akey_nopw.pem'
+CERTFILE='./cert.pem'
+KEYFILE='./key.pem'
 FAKE_SSL_DOMAIN=""
 #CERTFILE='./certs/fullchain.pem'
 #KEYFILE='./certs/privkey.pem'
@@ -307,6 +307,27 @@ class Karma2:
         self.send_response(200)
         self.end_headers()
         self.wfile.write('{"retcode":0}\n')
+
+      elif path == 'v1/wifi/EN/':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write("""
+<META HTTP-EQUIV="Cache-Control" CONTENT="no-cache" />
+<META HTTP-EQUIV="Pragma" CONTENT="no-cache" />
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="HandheldFriendly" content="true">
+<title>BlackBerry | Now Connected</title>
+</head>
+<!-- Do not remove: 74dfa016-f57e-4b3a-bf33-a817b00c44a2 -->
+<body rel="74dfa016-f57e-4b3a-bf33-a817b00c44a2">
+<p><img src="http://icc.blackberry.com/v1/wifi/logo.gif" alt="BlackBerry"></p>
+<p>Your BlackBerry device is now connected to the Internet.</p>
+</body>
+</html>""")
 
       elif "mail" in path or "mail" in host:
         self.send_response(200)
