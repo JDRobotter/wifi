@@ -476,6 +476,12 @@ class Karma2:
         self.wfile.write('{"status":"1"}')
         logfaked()
 
+      elif path == '/pep/gcc':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('FR\n')
+        logfaked()
+
       elif path.startswith('doss/dxbb/upload_file'):
         self.send_response(200)
         self.end_headers()
