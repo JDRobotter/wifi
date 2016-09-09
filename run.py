@@ -399,6 +399,11 @@ class Karma2:
         self.end_headers()
         self.wfile.write('<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>')
       
+      elif path == 'FileManager/v2/check.action':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('{"status":"1"}')
+
       elif path.startswith('doss/dxbb/upload_file'):
         self.send_response(200)
         self.end_headers()
