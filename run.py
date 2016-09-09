@@ -315,9 +315,30 @@ class Karma2:
       if self.server.PRE == 'HTTPS':
         protocol = _ctxt(self.server.PRE,RED)
       log( "%s %s GET: %s => %s"%(essid,protocol,client,fullpath) )
-      for k in self.headers:
-        log( "%s> %s:%s"%(_ctxt(" |\\--",BLUE),k,self.headers.get(k)) )
-      
+
+      if len(self.headers) > 0:
+        log( _ctxt(" /headers", BLUE))
+        for k in self.headers:
+          log( "%s> %s:%s"%(_ctxt(" |\\--",BLUE),k,self.headers.get(k)) )
+
+      try:
+        if params is not None:
+          log( _ctxt(" /params", YELLOW))
+          for kv in params.split('&'):
+            if kv is None:
+              continue
+            k,v = kv.split('=')
+            try:
+              s = base64.b64decode(v)
+              # try to decode as utf8, do not use decoded string
+              s.decode('utf8')
+              log( "%s> %s:%s (B64: %s)"%(_ctxt(" |\\--",YELLOW),k,v,s) )
+            except Exception as e:
+              log( "%s> %s:%s"%(_ctxt(" |\\--",YELLOW),k,v) )
+
+      except Exception as e:
+        raise
+
       if self.headers.get('user-agent') is not None:
           #self.headers.get('user-agent')
           pass
@@ -338,23 +359,6 @@ class Karma2:
             client,
             host,
             http_auth))
-
-      try:
-        if params is not None:
-          for kv in params.split('&'):
-            if kv is None:
-              continue
-            k,v = kv.split('=')
-            try:
-              s = base64.b64decode(v)
-              # try to decode as utf8, do not use decoded string
-              s.decode('utf8')
-              log("--- %s : %s (B64: %s)"%(k,v,s))
-            except Exception as e:
-              log("--- %s : %s"%(k,v))
-
-      except Exception as e:
-        raise
 
       def logfaked():
         log("(%s)"%_ctxt("faked",YELLOW))
