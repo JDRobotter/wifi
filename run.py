@@ -438,6 +438,12 @@ class Karma2:
         self.wfile.write('{"retcode":0}\n')
         logfaked()
 
+      elif host == 'check.googlezip.net' and path == 'connect':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write('OK')
+        logfaked()
+
       elif path == 'v1/wifi/EN/':
         self.send_response(200)
         self.end_headers()
