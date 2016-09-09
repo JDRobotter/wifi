@@ -501,7 +501,7 @@ class Karma2:
         #save content
         if length > 0:
           bssid = self.server.app.get_client_bssid(client)
-          name = "%s_%s_%d"%(bssid,host,time.time())
+          name = "%s_%s_%d"%(bssid,host,1000*time.time())
           f = open(name,'w')
           f.write(post)
           f.close()
