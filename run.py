@@ -98,8 +98,10 @@ def parse_args():
     parser.add_argument("-q", "--test", action='store_true', help="run test mode")
     return parser.parse_args()
 
+log_lock = Lock()
 def log(message):
-  print "%s   %s"%(datetime.now(), message)
+  with log_lock:
+    print "%s   %s"%(datetime.now(), message)
 
 class Karma2:
 
