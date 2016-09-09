@@ -20,6 +20,11 @@ import string
 
 CERTFILE='./cert.pem'
 KEYFILE='./key.pem'
+
+import sys
+sys.path.insert(0,"./impacket/")
+from impacket import smbserver
+
 FAKE_SSL_DOMAIN=""
 #CERTFILE='./certs/fullchain.pem'
 #KEYFILE='./certs/privkey.pem'
@@ -202,6 +207,28 @@ class Karma2:
       set_title('pop3server %s'%self.port)
       server = Karma2.POP3TCPServer(('',self.port), Karma2.POP3TCPRequestHandler)
       server.serve_forever()
+
+  class SMBServer(Thread):
+    daemon = True
+    def __init__(self, app, port):
+      Thread.__init__(self)
+      self.app = app
+      self.port = port
+
+    def run(self):
+      import logging
+      log__ = logging.getLogger('impacket')
+      log__.setLevel(logging.CRITICAL)
+
+      server = smbserver.SimpleSMBServer(listenPort=self.port)
+      server.addShare("Rapport2016","/tmp","???")
+      server.setSMB2Support(True)
+      server.setSMBChallenge('')
+      server.setLogFile('')
+      def hash_cb(h,v):
+        log("SMB: HASH(%s) %s"%(h,v))
+      server.registerHashCallback(hash_cb)
+      server.start()
 
   class Webserver(Thread):
     daemon=True
@@ -924,6 +951,7 @@ class Karma2:
       self.setup_nat(ifgw)
     else:
       self.redirections[110] = 8110
+      self.redirections[445] = 8445
 
     self.redirections[80] = 8080
     self.redirections[443] = 8081
@@ -1095,6 +1123,10 @@ class Karma2:
     pop = Karma2.POP3Server(km,pop3_port)
     pop.start()
 
+  def start_smbserver(self, km, smb_port):
+    smb = Karma2.SMBServer(km, smb_port)
+    smb.start()
+
   def status(self, signum, stack):
     print "==========="
     for essid,ap in self.aps.iteritems():
@@ -1151,6 +1183,7 @@ if __name__ == '__main__':
     if args.offline:
       km.start_webserver(km, km.redirections[80], km.redirections[443])
       km.start_mailserver(km, km.redirections[110])
+      km.start_smbserver(km, km.redirections[445])
 
     if args.name is not None:
       for name in args.name:
