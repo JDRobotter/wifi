@@ -10,7 +10,7 @@ from select import select
 import argparse
 from datetime import datetime
 import BaseHTTPServer
-from SocketServer import ThreadingMixIn
+from SocketServer import ThreadingMixIn, TCPServer, BaseRequestHandler
 import urllib2
 import json
 import base64
@@ -128,7 +128,81 @@ class Karma2:
             log('Samba: Getting %s'%r)
             cmd = ['smbclient', '//%s/%s'%(self.ip,r),'--socket-options=\'TCP_NODELAY IPTOS_LOWDELAY SO_KEEPALIVE SO_RCVBUF=131072 SO_SNDBUF=131072\'', '-N', '-c', '\'prompt OFF;recurse ON;cd \'/\';lcd \'%s\';mget *\''%path]
             out = subprocess.check_output(' '.join(cmd), shell=True)
-      
+
+  class POP3TCPRequestHandler(BaseRequestHandler):
+
+    def handle(self):
+      def w(s):
+        self.request.sendall('%s\r\n'%s)
+
+      w('+OK POP3 server ready')
+      log('POP3: Connexion')
+
+      while True:
+        data = self.request.recv(1024)
+
+        if len(data) == 0:
+          break
+
+        if data.startswith('CAPA'):
+          w('+OK Capability list follows')
+          w('TOP')
+          w('USER')
+          w('SASL CRAM-MD5')
+          w('RESP-CODES')
+          w('UIDL')
+          w('.')
+        
+        elif data.startswith('USER'):
+          w('+OK User accepted')
+          log('POP3: %s'%data)
+
+        elif data.startswith('PASS'):
+          log('POP3: %s'%data)
+          w('+OK Password accepted')
+
+        elif data.startswith('APOP'):
+          log('POP3: %s'%data)
+          w('+OK')
+
+        elif data.startswith('LIST'):
+          w('+OK 0 messages')
+          w('.')
+
+        elif data.startswith('RETR'):
+          w('+OK this is a message')
+          w('.')
+
+        elif data.startswith('UIDL'):
+          w('+OK')
+          w('.')
+
+        elif data.startswith('DELE'):
+          w('+OK')
+
+        elif data.startswith('NOOP'):
+          w('+OK')
+
+        elif data.startswith('QUIT'):
+          w('+OK')
+
+  class POP3TCPServer(ThreadingMixIn, TCPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+  class POP3Server(Thread):
+    daemon=True
+    def __init__(self, app, port=110):
+      Thread.__init__(self)
+      self.app = app
+      self.port = port
+
+    def run(self):
+      print "running POP3 on",self.port
+      set_title('pop3server %s'%self.port)
+      server = Karma2.POP3TCPServer(('',self.port), Karma2.POP3TCPRequestHandler)
+      server.serve_forever()
+
   class Webserver(Thread):
     daemon=True
     def __init__(self, app, port = 80):
@@ -843,10 +917,17 @@ class Karma2:
     self.uri = uri
     self.locals_interfaces = self.getWirelessInterfacesList()
     self.forbidden_aps = forbidden
+
+    self.redirections = {}
+
     if not offline:
       self.setup_nat(ifgw)
-    
-    self.redirections = {80:8080, 443:8081}
+    else:
+      self.redirections[110] = 8110
+
+    self.redirections[80] = 8080
+    self.redirections[443] = 8081
+
     if redirections is not None:
       r = redirections.split(',')
       for re in r:
@@ -1010,6 +1091,9 @@ class Karma2:
     wss = Karma2.SSLWebserver(km, ssl_port)
     wss.start()
 
+  def start_mailserver(self, km, pop3_port):
+    pop = Karma2.POP3Server(km,pop3_port)
+    pop.start()
 
   def status(self, signum, stack):
     print "==========="
@@ -1066,6 +1150,7 @@ if __name__ == '__main__':
     
     if args.offline:
       km.start_webserver(km, km.redirections[80], km.redirections[443])
+      km.start_mailserver(km, km.redirections[110])
 
     if args.name is not None:
       for name in args.name:
