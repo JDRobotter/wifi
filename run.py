@@ -210,6 +210,28 @@ class Karma2:
       server.serve_forever()
       log("[%s] POP3 server on port %d is shutting down"%(_ctxt('x',RED),self.port))
 
+  class FTPTCPRequestHandler(BaseRequestHandler):
+    def handle(self):
+      log("[%s] %s"%(_ctxt('!',RED),_ctxt('Connexion received, yet the fake FTP server is not implemented',RED)))
+
+  class FTPTCPServer(ThreadingMixIn, TCPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+  class FTPServer(Thread):
+    daemon=True
+    def __init__(self, app, port=21):
+      Thread.__init__(self)
+      self.app = app
+      self.port = port
+
+    def run(self):
+      log("[+] Starting FTP server on port %d"%self.port)
+      set_title('ftp server %s'%self.port)
+      server = Karma2.FTPTCPServer(('',self.port), Karma2.FTPTCPRequestHandler)
+      server.serve_forever()
+      log("[%s] FTP server on port %d is shutting down"%(_ctxt('x',RED),self.port))
+
   class SMBServer(Thread):
     daemon = True
     def __init__(self, app, port):
@@ -991,6 +1013,7 @@ class Karma2:
     else:
       self.redirections[110] = 8110
       self.redirections[445] = 8445
+      self.redirections[21] = 8021
 
     self.redirections[80] = 8080
     self.redirections[443] = 8081
@@ -1166,6 +1189,10 @@ class Karma2:
     smb = Karma2.SMBServer(km, smb_port)
     smb.start()
 
+  def start_ftpserver(self, km, ftp_port):
+    ftp = Karma2.FTPServer(km, ftp_port)
+    ftp.start()
+
   def status(self, signum, stack):
     print "==========="
     for essid,ap in self.aps.iteritems():
@@ -1223,6 +1250,7 @@ if __name__ == '__main__':
       km.start_webserver(km, km.redirections[80], km.redirections[443])
       km.start_mailserver(km, km.redirections[110])
       km.start_smbserver(km, km.redirections[445])
+      km.start_ftpserver(km, km.redirections[21])
 
     if args.name is not None:
       for name in args.name:
