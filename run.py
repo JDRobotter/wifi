@@ -101,7 +101,7 @@ def parse_args():
 log_lock = Lock()
 def log(message):
   with log_lock:
-    print "%s   %s"%(datetime.now(), message)
+    print "%s   %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
 
 class Karma2:
 
