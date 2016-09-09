@@ -204,10 +204,11 @@ class Karma2:
       self.port = port
 
     def run(self):
-      print "running POP3 on",self.port
+      log("[+] Starting POP3 server on port %d"%self.port)
       set_title('pop3server %s'%self.port)
       server = Karma2.POP3TCPServer(('',self.port), Karma2.POP3TCPRequestHandler)
       server.serve_forever()
+      log("[%s] POP3 server on port %d is shutting down"%(_ctxt('x',RED),self.port))
 
   class SMBServer(Thread):
     daemon = True
@@ -221,6 +222,7 @@ class Karma2:
       log__ = logging.getLogger('impacket')
       log__.setLevel(logging.CRITICAL)
 
+      log("[+] Starting SMB server on port %d"%self.port)
       server = smbserver.SimpleSMBServer(listenPort=self.port)
       server.addShare("Rapport2016","/tmp","???")
       server.setSMB2Support(True)
@@ -230,6 +232,7 @@ class Karma2:
         log("SMB: HASH(%s) %s"%(h,v))
       server.registerHashCallback(hash_cb)
       server.start()
+      log("[%s] SMB server on port %d is shutting down"%(_ctxt('x',RED),self.port))
 
   class Webserver(Thread):
     daemon=True
@@ -240,14 +243,14 @@ class Karma2:
 
     def run(self):
       set_title('webserver %s'%self.port)
-      print "run server on", self.port
+      log("[+] Starting HTTP server on port %d"%self.port)
       server_class=Karma2.HTTPServer
       handler_class=Karma2.HTTPRequestHandler
       server_address = ('', self.port)
       httpd = server_class(server_address, self.app, handler_class)
       httpd.PRE = "HTTP"
       httpd.serve_forever()
-      print "server on",self.port," is shutting down"
+      log("[%s] HTTP server on port %d is shutting down"%(_ctxt('x',RED),self.port))
 
   class SSLWebserver(Webserver):
     def __init__(self, app, port = 443):
@@ -256,7 +259,7 @@ class Karma2:
 
     def run(self):
       set_title('webserver %s'%self.port)
-      print "run server on", self.port
+      log("[+] Starting HTTPS server on port %d"%self.port)
       server_class=Karma2.HTTPServer
       handler_class=Karma2.HTTPRequestHandler
       server_address = ('', self.port)
@@ -264,7 +267,7 @@ class Karma2:
       httpd.PRE = "HTTPS"
       httpd.socket = ssl.wrap_socket(httpd.socket, keyfile=KEYFILE, certfile=CERTFILE, server_side=True)
       httpd.serve_forever()
-      print "server on",self.port," is shutting down"
+      log("[%s] HTTPS server on port %d is shutting down"%(_ctxt("x",RED),self.port))
 
   class HTTPServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
     allow_reuse_address = True
