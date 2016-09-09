@@ -355,14 +355,23 @@ class Karma2:
       except Exception as e:
         raise
 
+      def logfaked():
+        log("(%s)"%_ctxt("faked",YELLOW))
+
+      def logphishing():
+        log("(%s)"%_ctxt("phishing",YELLOW))
+
       if path == 'generate_204' or path == 'gen_204' or path == 'mobile/status.php':
         self.send_response(204)
         self.end_headers()
+        logfaked()
 
       elif path == 'ncsi.txt':
         self.send_response(200)
         self.end_headers()
         self.wfile.write('Microsoft NCSI')
+        logfaked()
+
       elif path == 'hotspot-detect.html' or path == 'library/test/success.html':
         data = '''<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
@@ -374,45 +383,55 @@ class Karma2:
         self.send_response(200)
         self.end_headers()
         self.wfile.write(data)
+        logfaked()
+
       elif path == 'connecttest.txt':
         self.send_response(200)
         self.end_headers()
         self.wfile.write('Microsoft Connect Test')
+        logfaked()
 
       elif path == 'files/vpn_ssid.txt':
         self.send_response(200)
         self.end_headers()
         self.wfile.write('SSID\nStarbucks\nKFC\nMcDonalds\n')
+        logfaked()
 
       elif path == 'files/emupdate/pong.txt':
         self.send_response(200)
         self.end_headers()
         self.wfile.write('1')
+        logfaked()
 
       elif path == 'data/config_cleanmaster_version.json':
         self.send_response(200)
         self.end_headers()
         self.wfile.write('{"errno":"0","data":{"kbd":"%d"}}'%int(time.time()))
+        logfaked()
 
       elif host == 'captive.apple.com':
         self.send_response(200)
         self.end_headers()
         self.wfile.write('<HTML><HEAD><TITLE>Success</TITLE></HEAD><BODY>Success</BODY></HTML>')
+        logfaked()
       
       elif path == 'FileManager/v2/check.action':
         self.send_response(200)
         self.end_headers()
         self.wfile.write('{"status":"1"}')
+        logfaked()
 
       elif path.startswith('doss/dxbb/upload_file'):
         self.send_response(200)
         self.end_headers()
         self.wfile.write('WIFIFREEKEY_TEST_REDIRECTOR_PAGE\n')
+        logfaked()
 
       elif path == 'dot/wifiinfo':
         self.send_response(200)
         self.end_headers()
         self.wfile.write('{"retcode":0}\n')
+        logfaked()
 
       elif path == 'v1/wifi/EN/':
         self.send_response(200)
@@ -434,14 +453,15 @@ class Karma2:
 <p>Your BlackBerry device is now connected to the Internet.</p>
 </body>
 </html>""")
+        logfaked()
 
       elif "mail" in path or "mail" in host:
         self.send_response(200)
         self.end_headers()
         self.wfile.write(open('OutlookWebApp.html','r').read())
+        logphishing()
 
       else:
-        log("(%s)"%_ctxt("default",YELLOW))
         self.send_response(200)
         self.end_headers()
 
