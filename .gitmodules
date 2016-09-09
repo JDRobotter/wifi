@@ -1,0 +1,3 @@
+[submodule "impacket"]
+	path = impacket
+	url = git@github.com:JDRobotter/impacket.git
