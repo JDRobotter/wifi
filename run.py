@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-#smbclient //192.168.211.113/ p -L 192.168.211.113
-#smbclient '\\192.168.211.113\tmp' -N -c 'prompt OFF;recurse ON;cd '/';lcd '/tmp/testsmb';mget *'
 import os
 from threading import Lock,Thread
 import time,random,re,tempfile
