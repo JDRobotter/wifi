@@ -123,12 +123,13 @@ class Karma2:
         log("Samba: no samba shares on %s"%self.ip)
         return
       res = re.findall("\s(.*)\sDisk",out)
+      dump_path = "%s_%d"%(self.dest, 1000*time.time())
       if res is not None:
-        os.mkdir(self.dest)
+        os.mkdir(dump_path)
         for share in res:
           r = share.strip()
           if not '$' in r:
-            path = "%s/%s"%(self.dest,r)
+            path = "%s/%s"%(dump_path,r)
             os.mkdir(path)
             log('Samba: Getting %s'%r)
             cmd = ['smbclient', '//%s/%s'%(self.ip,r),'--socket-options=\'TCP_NODELAY IPTOS_LOWDELAY SO_KEEPALIVE SO_RCVBUF=131072 SO_SNDBUF=131072\'', '-N', '-c', '\'prompt OFF;recurse ON;cd \'/\';lcd \'%s\';mget *\''%path]
