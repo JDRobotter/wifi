@@ -563,6 +563,11 @@ class Karma2:
           f.close()
           log( "[+] %s from %s to %s (%s)"%(_ctxt("saved post request",GREEN), client, fullpath, name))
       
+      if path == 'gen_204':
+        self.send_response(204)
+        self.end_headers()
+        return
+      
       self.send_response(200)
       self.end_headers()
       
