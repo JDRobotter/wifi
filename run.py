@@ -95,13 +95,18 @@ def parse_args():
     parser.add_argument("-d", "--debug", action='store_true', help="debug mode")
     parser.add_argument("-u", "--uri", help="wifiScanMap sync uri")
     parser.add_argument("-b", "--forbidden", help="list of forBidden essid")
+    parser.add_argument("-l", "--logpath", help="log path")
     parser.add_argument("-q", "--test", action='store_true', help="run test mode")
     return parser.parse_args()
 
 log_lock = Lock()
+logfile = None
 def log(message):
   with log_lock:
-    print "%s   %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
+    message="%s   %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
+    print message
+    if logfile is not None:
+      logfile.write("%s\n"%message)
 
 class Karma2:
 
@@ -123,7 +128,7 @@ class Karma2:
         log("Samba: no samba shares on %s"%self.ip)
         return
       res = re.findall("\s(.*)\sDisk",out)
-      dump_path = "%s_%d"%(self.dest, 1000*time.time())
+      dump_path = os.path.join(self.app.logpath,"%s_%d"%(self.dest, 1000*time.time()))
       if res is not None:
         os.mkdir(dump_path)
         for share in res:
@@ -266,7 +271,7 @@ class Karma2:
 
     def run(self):
       set_title('adminserver %s'%self.port)
-      log("[+] Starting HTTP server on port %d"%self.port)
+      log("[+] Starting ADMIN server on port %d"%self.port)
       server_class=Karma2.HTTPServer
       handler_class=Karma2.AdminHTTPRequestHandler
       server_address = ('', self.port)
@@ -577,7 +582,7 @@ class Karma2:
         #save content
         if length > 0:
           bssid = self.server.app.get_client_bssid(client)
-          name = "%s_%s_%d"%(bssid,host,1000*time.time())
+          name = os.path.join(self.server.app.logpath,"%s_%s_%d"%(bssid,host,1000*time.time()))
           f = open(name,'w')
           f.write(post)
           f.close()
@@ -740,7 +745,7 @@ class Karma2:
         self.connectionwatch_process = None
 
     def start_tcp_dump(self):
-      self.logfile = "wifi-%s-%s.cap"%(self.essid,datetime.now().strftime("%Y%m%d-%H%M%S"))
+      self.logfile = os.path.join(self.karma.logpath,"wifi-%s-%s.cap"%(self.essid,datetime.now().strftime("%Y%m%d-%H%M%S")))
       log( "[+] Starting tcpdump %s"%self.logfile )
       cmd = ['tcpdump','-i', self.ifhostapd.str(), '-w', self.logfile]
       p = subprocess.Popen(cmd,
@@ -1071,7 +1076,12 @@ class Karma2:
           iface, = m.groups()
           return iface,p
 
-  def __init__(self, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None, redirections = None, offline = False, scan = False, debug = False, uri = None, forbidden = ()):
+  def __init__(self, logpath, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None, redirections = None, offline = False, scan = False, debug = False, uri = None, forbidden = ()):
+    self.logpath = logpath
+    if not os.path.exists(self.logpath):
+      os.mkdir(self.logpath)
+    
+    
     self.ifmon = ifmon
     self.ifgw = ifgw
     self.ifhostapds = Karma2.WLANInterfaces(ifhostapds)
@@ -1320,14 +1330,23 @@ if __name__ == '__main__':
       iface, = m.groups()
       log( "[+] Monitor interface %s created"%iface)
       args.monitor = iface
-
+      
+  if args.logpath is None:
+    args.logpath = './logs'
+    if not os.path.exists(args.logpath):
+      os.mkdir(args.logpath)
+    args.logpath = os.path.join(args.logpath,time.strftime("%Y-%m-%d_%H-%M-%S"))
+    if not os.path.exists(args.logpath):
+      os.mkdir(args.logpath)
+    logfile = open(os.path.join(args.logpath, 'wifis.log'), 'w')
+    
   try:
     args.hostapds = args.hostapds.split(',')
 
     forbidden = ()
     if args.forbidden is not None:
      forbidden = args.forbidden.split(',')
-    km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan, args.debug, args.uri, forbidden)
+    km = Karma2(args.logpath, args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan, args.debug, args.uri, forbidden)
     signal.signal(signal.SIGUSR1, km.status)
     signal.signal(signal.SIGUSR2, km.status)
     
@@ -1364,7 +1383,8 @@ if __name__ == '__main__':
   except KeyboardInterrupt:
     pass
   finally:
-
+    if logfile is not None:
+      logfile.close()
     if args.enable is not None:
       log( "[+] Stopping monitor interface %s properly"%args.monitor)
       cmd = ['airmon-ng','stop',args.monitor]
