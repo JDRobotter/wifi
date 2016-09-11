@@ -256,6 +256,25 @@ class Karma2:
       server.start()
       log("[%s] SMB server on port %d is shutting down"%(_ctxt('x',RED),self.port))
 
+  class AdminWebserver(Thread):
+    daemon=True
+    def __init__(self, app, port = 80, www  = 'www'):
+      Thread.__init__(self)
+      self.app = app
+      self.port = port
+      self.www_directory = www
+
+    def run(self):
+      set_title('adminserver %s'%self.port)
+      log("[+] Starting HTTP server on port %d"%self.port)
+      server_class=Karma2.HTTPServer
+      handler_class=Karma2.AdminHTTPRequestHandler
+      server_address = ('', self.port)
+      httpd = server_class(server_address, self.app, handler_class, True, 'www/')
+      httpd.PRE = "HTTP"
+      httpd.serve_forever()
+      log("[%s] HTTP server on port %d is shutting down"%(_ctxt('x',RED),self.port))
+      
   class Webserver(Thread):
     daemon=True
     def __init__(self, app, port = 80):
@@ -295,10 +314,11 @@ class Karma2:
     allow_reuse_address = True
     daemon_threads = True
 
-    def __init__(self, server_address, app, RequestHandlerClass, bind_and_activate=True):
+    def __init__(self, server_address, app, RequestHandlerClass, bind_and_activate=True, www = None):
       BaseHTTPServer.HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
       self.app = app
       self.PRE = ''
+      self.www_directory = www
 
   class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     
@@ -570,7 +590,62 @@ class Karma2:
       
       self.send_response(200)
       self.end_headers()
+  
+  class AdminHTTPRequestHandler(HTTPRequestHandler):    
+    
+    def _get_status(self):
+      self.send_response(200)
+      self.end_headers()
       
+      status = {}
+      
+      for essid,ap in self.server.app.aps.iteritems():
+        status[ap.ifhostapd.iface] = {}
+        status[ap.ifhostapd.iface]['ssid'] = ap.essid
+        status[ap.ifhostapd.iface]['count'] = len(ap.clients)
+        status[ap.ifhostapd.iface]['inactivity'] = (time.time() - ap.activity_ts)
+        status[ap.ifhostapd.iface]['timeout'] = ap.timeout
+        status[ap.ifhostapd.iface]['clients'] = {}
+        for mac,ip in ap.clients.iteritems():
+          status[ap.ifhostapd.iface]['clients'][mac] = ip
+      
+      
+      data = json.dumps(status, ensure_ascii=False)
+      try:
+        self.wfile.write(data.encode('latin-1'))
+      except Exception as e:
+        print e
+        print data
+    
+    def _get_file(self, path):
+      _path = os.path.join(self.server.www_directory,path)
+      if os.path.exists(_path):
+          try:
+          # open asked file
+              data = open(_path,'r').read()
+
+              # send HTTP OK
+              self.send_response(200)
+              self.end_headers()
+
+              # push data
+              self.wfile.write(data)
+          except IOError as e:
+                self.send_500(str(e))
+    
+    def do_GET(self):
+      path,params,args = self._parse_url()
+      if ('..' in args) or ('.' in args):
+        self.send_400()
+        return
+      if len(args) == 1 and args[0] == '':
+        path = 'index.html'
+      elif len(args) == 1 and args[0] == 'status.json':
+        return self._get_status()
+      else:
+        return self._get_file(path)
+    
+    
   class WLANInterface:
     def __init__(self, iface):
       self.iface = iface
@@ -1180,6 +1255,10 @@ class Karma2:
       
       sniff(prn=_filter,store=0)
 
+  def start_adminserver(self, km, port):
+    aserver = Karma2.AdminWebserver(km, port)
+    aserver.start()
+
   def start_webserver(self, km, port, ssl_port):
     ws = Karma2.Webserver(km, port)
     ws.start()
@@ -1199,11 +1278,12 @@ class Karma2:
     ftp.start()
 
   def status(self, signum, stack):
-    print "==========="
+    print ">>"
     for essid,ap in self.aps.iteritems():
-      print "%s => %s (%s), inactive for %ss/%ss"%(ap.ifhostapd.iface, ap.essid, len(ap.clients), (time.time() - ap.activity_ts, ap.timeout))
+      print "%s => %s (%s), inactive for %ss/%ss"%(ap.ifhostapd.iface, ap.essid, len(ap.clients), int((time.time() - ap.activity_ts)), ap.timeout)
       for mac,ip in ap.clients.iteritems():
         print "\t%s => %s"%(mac,ip)
+    print "<<"
 
 if __name__ == '__main__':
 
@@ -1250,6 +1330,8 @@ if __name__ == '__main__':
     km = Karma2(args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan, args.debug, args.uri, forbidden)
     signal.signal(signal.SIGUSR1, km.status)
     signal.signal(signal.SIGUSR2, km.status)
+    
+    km.start_adminserver(km, 9999)
     
     if args.offline:
       km.start_webserver(km, km.redirections[80], km.redirections[443])
