@@ -60,6 +60,7 @@ def log(message):
     if logfile is not None:
       message="%s  %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
       logfile.write("%s\n"%message)
+      logfile.flush()
 
 class Karma2:
 
@@ -360,6 +361,13 @@ if __name__ == '__main__':
       os.mkdir(args.logpath)
     logfile = open(os.path.join(args.logpath, 'wifis.log'), 'w')
     
+    sl = './logs/lastlog'
+    if os.path.exists(sl) or os.path.islink(sl):
+      os.unlink(sl)
+    src = os.path.join(os.path.abspath(args.logpath), 'wifis.log')
+    print src,sl
+    os.symlink(src, sl)
+
   try:
     args.hostapds = args.hostapds.split(',')
 
