@@ -9,11 +9,14 @@ class ServiceGuessr:
   def split_params(self, params):
     kvs = {}
     if params is not None:
-      for kv in params.split('&'):
-        if kv is None:
-          continue
-        k,v = kv.split('=')
-        kvs[k] = v
+      try:
+        for kv in params.split('&'):
+          if kv is None:
+            continue
+          k,v = kv.split('=')
+          kvs[k] = v
+      except:
+        pass
     return kvs
 
   def feed_dns_request(self, client_mac, host):
@@ -36,6 +39,20 @@ class ServiceGuessr:
       self.karma.db.new_service(client_mac, "app", "gtalk", '', '')
       return
 
+    m = re.match(r'imap.gmail.com', host)
+    if m is not None:
+      self.karma.db.new_service(client_mac, "app", "imap-gmail", '', '')
+      return
+
+    m = re.match(r'imap.aol.com', host)
+    if m is not None:
+      self.karma.db.new_service(client_mac, "app", "imap-aol", '', '')
+      return
+
+    m = re.match(r'skydrive.wns.windows.com', host)
+    if m is not None:
+      self.karma.db.new_service(client_mac, "app", "skydrive", '', '')
+      return
 
   def feed_http_request(self, client_mac, protocol, path, params, headers):
     dparams = self.split_params(params)

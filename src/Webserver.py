@@ -111,18 +111,21 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     try:
       if params is not None:
-        self.server.app.log( ctxt(" /params", YELLOW))
-        for kv in params.split('&'):
-          if kv is None:
-            continue
-          k,v = kv.split('=')
-          try:
-            s = base64.b64decode(v)
-            # try to decode as utf8, do not use decoded string
-            s.decode('utf8')
-            self.server.app.log( "%s> %s:%s (B64: %s)"%(ctxt(" |\\--",YELLOW),k,v,s) )
-          except Exception as e:
-            self.server.app.log( "%s> %s:%s"%(ctxt(" |\\--",YELLOW),k,v) )
+        try:
+          self.server.app.log( ctxt(" /params", YELLOW))
+          for kv in params.split('&'):
+            if kv is None:
+              continue
+            k,v = kv.split('=')
+            try:
+              s = base64.b64decode(v)
+              # try to decode as utf8, do not use decoded string
+              s.decode('utf8')
+              self.server.app.log( "%s> %s:%s (B64: %s)"%(ctxt(" |\\--",YELLOW),k,v,s) )
+            except Exception as e:
+              self.server.app.log( "%s> %s:%s"%(ctxt(" |\\--",YELLOW),k,v) )
+        except:
+          pass
 
     except Exception as e:
       raise

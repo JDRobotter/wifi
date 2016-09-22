@@ -220,8 +220,24 @@ class Karma2:
     ap.daemon = True
     ap.start()
 
-  def create_ap(self, essid, bssid = None, timeout = 30):
-    iface = self.ifhostapds.get_one()
+  def create_aps(self, essids, bssids, timeout=30):
+    while True:
+      # fetch one interface
+      iface = self.ifhostapds.get_one()
+      if iface is None:
+        break
+
+      # get aps for this ap
+      n = iface.available_ap
+      messids = essids[:n]
+      essids = essids[n:]
+
+      mbssids = bssids[:n]
+      bssids = bssids[n:]
+
+      self.create_ap(iface, messids, mbssids, timeout)
+
+  def create_ap(self, iface, essid, bssid=None, timeout=30):
     if iface is None:
       return
     if iface.available_ap >= len(essid):
@@ -403,7 +419,7 @@ if __name__ == '__main__':
           pass
         bssids.append(bssid)
         
-      km.create_ap(essids, bssids, 60*60*24*365)
+      km.create_aps(essids, bssids, 60*60*24*365)
     
     if not args.test:
       km.do_sniff()
@@ -412,7 +428,7 @@ if __name__ == '__main__':
       if args.test:
         char_set = string.ascii_uppercase + string.digits
         essid = ''.join(random.sample(char_set*6, 6))
-        km.create_ap("test_%s"%essid, None)
+        km.create_ap(self.ifhostapds.get_one(), "test_%s"%essid, None)
         
       time.sleep(1)
 
