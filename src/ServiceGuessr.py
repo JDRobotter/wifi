@@ -20,7 +20,6 @@ class ServiceGuessr:
     return kvs
 
   def feed_dns_request(self, client_mac, host):
-    print client_mac, host
     if host in ('apresolve.spotify.com',):
       self.karma.db.new_service(client_mac, "app", "spotify", '', '')
       return
