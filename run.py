@@ -349,6 +349,8 @@ class Karma2:
       client = self.client_address[0]
       path,params,args = self._parse_url()
       host = self.headers.get('Host')
+      if host is None:
+        host = ''
       dns = {
         'bssid': self.server.app.get_client_bssid(client),
         'host': host
