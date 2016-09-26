@@ -1017,6 +1017,8 @@ class Karma2:
         
       if(self.karma.offline):
         cmd.append('-R')
+        # https://technet.microsoft.com/en-us/library/cc732049%28v=ws.10%29.aspx
+        cmd.append('--address=/dns.msftncsi.com/131.107.255.255')
         cmd.append('--address=/#/%s'%(subnet.gateway()))
       p = subprocess.Popen(cmd,
         stdout=subprocess.PIPE,
