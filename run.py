@@ -103,9 +103,10 @@ log_lock = Lock()
 logfile = None
 def log(message):
   with log_lock:
-    message="%s   %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
+    message="%s  %s"%(time.strftime("%H:%M:%S"), message)
     print message
     if logfile is not None:
+      message="%s  %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
       logfile.write("%s\n"%message)
 
 class Karma2:
