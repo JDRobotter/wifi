@@ -745,10 +745,19 @@ class Karma2:
         self.tcpdump_process = None
 
       if fishing:
+        # allow DNS
+        self.setup_allow(iface, 'udp', 53)
+        self.setup_allow(iface, 'tcp', 53)
+        # allow DHCP
+        self.setup_allow(iface, 'udp', 67)
         # redirect the following ports
         for sport, dport in self.karma.redirections.iteritems():
+          self.setup_allow(iface,'tcp',dport)
           self.setup_redirections(iface,sport,dport)
         self.connectionwatch_process = self.start_connectionwatch(iface)
+
+        # block all input packets
+        self.setup_block_all(iface)
 
       else:
         self.connectionwatch_process = None
@@ -982,23 +991,76 @@ class Karma2:
       return p
       
 
-    def setup_redirections(self, iface, inport, outport):
+    def setup_iptables(self, cmd):
+      cmd = ['iptables',] + cmd
       if self.karma.debug:
-        log( "[+] Setting up (%s) %d to %d redirection"%(iface,inport,outport))
-      cmd = ['iptables',
-        '-t', 'nat',
-        '-A', 'PREROUTING',
-        '-i', iface,
-        '-p', 'tcp',
-        '--dport', str(inport),
-        '-j', 'REDIRECT',
-        '--to-port', str(outport),
-        ]
+        log('[?] %s'%(' '.join(cmd)))
       p = subprocess.Popen(cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
       p.wait()
       return p
+
+    def setup_block_all(self, iface):
+      self.setup_iptables([
+        '-A','INPUT',
+        '-i',iface,
+        '-m','conntrack',
+        '-j','ACCEPT',
+        '--ctstate','RELATED,ESTABLISHED',
+      ])
+      self.setup_iptables([
+        '-A','INPUT',
+        '-i',iface,
+        '-m','state',
+        '--state','ESTABLISHED,RELATED',
+        '-j','ACCEPT',
+      ])
+      self.setup_iptables([
+        '-A','INPUT',
+        '-i',iface,
+        '-j','DROP'])
+      self.setup_iptables([
+        '-A','OUTPUT',
+        '-i',iface,
+        '-m','state',
+        '--state','ESTABLISHED,RELATED',
+        '-j','ACCEPT',
+      ])
+      self.setup_iptables([
+        '-A','OUTPUT',
+        '-i',iface,
+        '-j','DROP'])
+      self.setup_iptables([
+        '-A','FORWARD',
+        '-i',iface,
+        '-m','state',
+        '--state','ESTABLISHED,RELATED',
+        '-j','ACCEPT',
+      ])
+      self.setup_iptables([
+        '-A','FORWARD',
+        '-i',iface,
+        '-j','DROP'])
+
+    def setup_allow(self, iface, proto, port):
+      return self.setup_iptables([
+        '-A','INPUT',
+        '-i',iface,
+        '-p',proto,
+        '--dport',str(port),
+        '-j','ACCEPT'])
+
+    def setup_redirections(self, iface, inport, outport):
+      self.setup_iptables([
+        '-A', 'PREROUTING',
+        '-i', iface,
+        '-t', 'nat',
+        '-p', 'tcp',
+        '--dport', str(inport),
+        '-j', 'REDIRECT',
+        '--to-port', str(outport),
+        ])
 
     def start_dhcpd(self, iface, subnet):
       # create a temporary file
