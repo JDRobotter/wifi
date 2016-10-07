@@ -12,53 +12,63 @@ class AccessPoint(Thread):
   def __init__(self, karma, ifhostapd, essid, bssid, timeout, wpa2=None, fishing=True):
     Thread.__init__(self)
     self.essid = essid
-    self.bssid = karma.getMacFromIface(ifhostapd.str())
-    if bssid is not None:
+    self.bssid = []
+    for e in essid:
+      self.bssid.append(karma.getMacFromIface(ifhostapd.str()))
+    if len(bssid) > 1:
       self.bssid = bssid
     self.karma = karma
     self.timeout = timeout
     self.wpa2 = wpa2
     self.ifhostapd = ifhostapd
+    self.ifaces = []
     self.unused = True
     self.activity_ts = time.time()
     self.logfile = None
     self.clients = {}
-    iface,self.hostapd_process = self.create_hostapd_access_point(essid, bssid, wpa2)
-    subnet = self.karma.get_unique_subnet()
-    self.subnet = None
-    self.setup_iface(iface,subnet)
+    self.ifaces,self.hostapd_process = self.create_hostapd_access_point(essid, bssid, wpa2)
+    
+    for iface in self.ifaces:
+      subnet = self.karma.get_unique_subnet()
+      self.subnet = None
+      self.setup_iface(iface,subnet)
 
-    self.dhcpd_process = self.start_dhcpd(iface,subnet)
+      self.dhcpd_process = self.start_dhcpd(iface,subnet)
 
-    self.nmaps = []
+      self.nmaps = []
 
-    if self.karma.tcpdump:
-      self.tcpdump_process = self.start_tcp_dump()
-    else:
-      self.tcpdump_process = None
+      if self.karma.tcpdump:
+        self.tcpdump_process = self.start_tcp_dump()
+      else:
+        self.tcpdump_process = None
 
-    if fishing:
-      # allow DNS
-      self.setup_allow(iface, 'udp', 53)
-      self.setup_allow(iface, 'tcp', 53)
-      # allow DHCP
-      self.setup_allow(iface, 'udp', 67)
-      # redirect the following ports
-      for sport, dport in self.karma.redirections.iteritems():
-        self.setup_allow(iface,'tcp',dport)
-        self.setup_redirections(iface,sport,dport)
-      self.connectionwatch_process = self.start_connectionwatch(iface)
+      if fishing:
+        # allow DNS
+        self.setup_allow(iface, 'udp', 53)
+        self.setup_allow(iface, 'tcp', 53)
+        # allow DHCP
+        self.setup_allow(iface, 'udp', 67)
+        # redirect the following ports
+        for sport, dport in self.karma.redirections.iteritems():
+          self.setup_allow(iface,'tcp',dport)
+          self.setup_redirections(iface,sport,dport)
+        self.connectionwatch_process = self.start_connectionwatch(iface)
 
-      # block all input packets
-      self.setup_block_all(iface)
+        # block all input packets
+        self.setup_block_all(iface)
 
-    else:
-      self.connectionwatch_process = None
+      else:
+        self.connectionwatch_process = None
 
   def start_tcp_dump(self):
-    self.logfile = os.path.join(self.karma.logpath,"wifi-%s-%s.cap"%(self.essid,datetime.now().strftime("%Y%m%d-%H%M%S")))
+    self.logfile = os.path.join(self.karma.logpath,"wifi-%s-%s.cap"%(self.get_essid(),datetime.now().strftime("%Y%m%d-%H%M%S")))
     self.karma.log( "[+] Starting tcpdump %s"%self.logfile )
-    cmd = ['tcpdump','-i', self.ifhostapd.str(), '-w', self.logfile]
+    cmd = ['tcpdump']
+    for iface in self.ifaces:
+      cmd.append('-i')
+      cmd.append(iface)
+    cmd.append('-w')
+    cmd.append(self.logfile)
     p = subprocess.Popen(cmd,
       stdout=subprocess.PIPE,
       stderr=subprocess.PIPE)
@@ -79,7 +89,7 @@ class AccessPoint(Thread):
           self.karma.log( "%s Unable to start nmap %s"%(ctxt("[!]",RED)) )
   
   def run(self):
-    set_title('hostapd %s'%self.essid)
+    set_title('hostapd %s'%self.get_essid())
     self.karma.log( "[+] now running" )
     
     def _killall():
@@ -119,15 +129,17 @@ class AccessPoint(Thread):
         p = subprocess.Popen(cmd)
         p.wait()
         
-        cmd = ["iwconfig", self.ifhostapd.str(), "mode", 'managed']
-        p = subprocess.Popen(cmd)
-        p.wait()
+        for iface in self.ifaces:
+          cmd = ["iwconfig", iface, "mode", 'managed']
+          p = subprocess.Popen(cmd)
+          p.wait()
         
         for p in self.nmaps:
           p.kill()
           p.wait()
         try:
-          self.karma.release_ap(self.essid)
+          for e in self.essid:
+            self.karma.release_ap(self.e)
         except:
           pass
         self.karma.ifhostapds.free_one(self.ifhostapd)
@@ -146,13 +158,13 @@ class AccessPoint(Thread):
     while True:
       # check alive
       if self.activity_ts is None:
-        self.karma.log( "%s Unable to create an AP for %s"%(ctxt("[!]",RED),self.essid))
+        self.karma.log( "%s Unable to create an AP for %s"%(ctxt("[!]",RED),self.get_essid()))
         _killall()
         return
 
       # check timeout
       if time.time() - self.activity_ts > self.timeout:
-        self.karma.log( "[x] No activity for essid %s, destroying AP"%self.essid)
+        self.karma.log( "[x] No activity for essid %s, destroying AP"%self.get_essid())
         _killall()
         return
 
@@ -220,7 +232,7 @@ class AccessPoint(Thread):
             if m is not None:
               mac, = m.groups()
               if not self.clients.has_key(mac):
-                self.karma.log( "Client %s associated to %s"%(ctxt(mac,GREEN),ctxt(self.essid,GREEN)))
+                self.karma.log( "Client %s associated to %s"%(ctxt(mac,GREEN),ctxt(self.get_essid(),GREEN)))
                 self.unused = False
 
               self.activity_ts = time.time()
@@ -266,7 +278,7 @@ class AccessPoint(Thread):
                 if m is not None:
                   mac, ipsrc, ipdst = m.groups()
                   if ipsrc == ipdst and mac != self.bssid:
-                    self.karma.log("[+] %s gratuitous arp from %s to %s"%(ctxt(self.essid,GREEN), mac, ipdst))
+                    self.karma.log("[+] %s gratuitous arp from %s to %s"%(ctxt(self.get_essid(),GREEN), mac, ipdst))
                     subnet_base = "%s.%%d"%('.'.join(ipsrc.split('.')[:3]))
                     subnet = IPSubnet(subnet_base)
                     #if self.subnet.gateway() != subnet.gateway():
@@ -275,7 +287,7 @@ class AccessPoint(Thread):
                     self.register_client(mac,ipsrc)
             if dns != {}: 
               if self.karma.update_dns({'dns':dns}):
-                self.karma.log( "[+] %s %s => %s"%(ctxt(self.essid,GREEN), dns['bssid'], dns['host']))
+                self.karma.log( "[+] %s %s => %s"%(ctxt(self.get_essid(),GREEN), dns['bssid'], dns['host']))
           self.activity_ts = time.time()
 
   def nmap(self, ip):
@@ -399,33 +411,48 @@ class AccessPoint(Thread):
       stderr=subprocess.PIPE)
     return p
 
+  def get_essid(self):
+    return '-'.join(self.essid)
+
   def create_hostapd_access_point(self, essid, bssid, wpa2):
     bssid_text = ""
-    if bssid is not None:
-      bssid_text = " with bssid %s"%bssid
-    self.karma.log( "[+] Creating (hostapd) AP %s %s"%(ctxt(essid,GREEN),bssid_text))
-
+    bssid_text = " with bssid %s"%len(bssid)
+    self.karma.log( "[+] Creating (hostapd) AP %s %s"%(ctxt(self.get_essid(),GREEN),bssid_text))
+    ifaces = []
     interface = self.ifhostapd.str()
+    ifaces.append(interface)
     channel = random.randint(1,11)
+    
 
     f = tempfile.NamedTemporaryFile(delete=False)
-    f.write("ssid=%s\n"%(essid))
-    if bssid is not None:
-      f.write("bssid=%s\n"%(bssid))
     f.write("interface=%s\n"%(interface))
+    f.write("ssid=%s\n"%(essid[0]))
+    if bssid[0] is not None:
+      f.write("bssid=%s\n"%(bssid))
     f.write("channel=%s\n"%(channel))
     f.write("hw_mode=g\n")
-    #f.write("ignore_broadcast_ssid=1")
+    f.write("ieee80211n=1\n")
     if wpa2 is not None:
       f.write("wpa=2\n")
       f.write("wpa_passphrase=%s\n"%wpa2)
       f.write("wpa_key_mgmt=WPA-PSK\n")
       f.write("wpa_pairwise=CCMP\n")
       f.write("rsn_pairwise=CCMP\n")
+    
+    i = 0
+    for e in essid[1:]:
+      interface = "%s_%s\n"%(interface[-3:], i)
+      ifaces.append(interface)
+      f.write("bss=%s"%interface)
+      f.write("ssid=%s\n"%e)
+      if bssid[i] is not None:
+        f.write("bssid=%s\n"%(bssid[i]))
+      i += 1
+    
     f.close()
     cmd = ["hostapd","-d",f.name]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return interface,p
+    return ifaces,p
 
   def create_airbase_access_point(self, essid):
     self.karma.log( "[+] Creating (airbase) AP %s"%essid)
