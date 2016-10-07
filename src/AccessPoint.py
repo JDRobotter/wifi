@@ -377,9 +377,9 @@ class AccessPoint(Thread):
 
     cmd = ['dnsmasq',
       '-d',
-      '--self.karma.log-dhcp',
+      '--log-dhcp',
       '--bind-dynamic',
-      '--self.karma.log-facility=-',
+      '--log-facility=-',
       '-i', iface,
       '-F', '%s,%s'%(subnet.range_lower(),subnet.range_upper()),
       '--dhcp-option=option:router,%s'%(subnet.gateway()),
