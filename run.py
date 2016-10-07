@@ -86,7 +86,7 @@ def parse_args():
     parser.add_argument("-e", "--enable", help="Choose the monitor interface to enable")
     parser.add_argument("-a", "--hostapds", help="List of interfaces which will be used to create aps")
     parser.add_argument("-n", "--name", action="append", help="start only this given essid with optional bssid ie myWifi,00:27:22:35:07:70")
-    parser.add_argument("-f", "--framework", help="path to the metasploit console")
+    parser.add_argument("-f", "--metasploit", help="path to the metasploit console")
     parser.add_argument("-t", "--tcpdump", action='store_true', help="run tcpdump on interface")
     parser.add_argument("-o", "--offline", action='store_true', help="offline mode")
     parser.add_argument("-r", "--redirections", help="List of redirections (default is 80:8080,443:8080")
@@ -1202,29 +1202,29 @@ class Karma2:
           iface, = m.groups()
           return iface,p
 
-  def __init__(self, logpath, ifgw, ifmon, ifhostapds = None, metasploit = None, tcpdump = None, redirections = None, offline = False, scan = False, debug = False, uri = None, forbidden = ()):
-    self.logpath = logpath
+  def __init__(self, args):
+    self.logpath = args.logpath
     if not os.path.exists(self.logpath):
       os.mkdir(self.logpath)
     
     
-    self.ifmon = ifmon
-    self.ifgw = ifgw
-    self.ifhostapds = Karma2.WLANInterfaces(ifhostapds)
+    self.ifmon = args.monitor
+    self.ifgw = args.gateway
+    self.ifhostapds = Karma2.WLANInterfaces(args.hostapds)
     self.aps = {}
     self.subnets = set(xrange(50,256)) 
     self.clear_iptables()
-    self.offline = offline
-    self.tcpdump = tcpdump
-    self.scan = scan
-    self.debug = debug
-    self.uri = uri
+    self.offline = args.offline
+    self.tcpdump = args.tcpdump
+    self.scan = args.scan
+    self.debug = args.debug
+    self.uri = args.uri
     self.locals_interfaces = self.getWirelessInterfacesList()
-    self.forbidden_aps = forbidden
+    self.forbidden_aps = args.forbidden
 
     self.redirections = {}
 
-    if not offline:
+    if not args.offline:
       self.setup_nat(ifgw)
     else:
       self.redirections[110] = 8110
@@ -1234,14 +1234,14 @@ class Karma2:
     self.redirections[80] = 8080
     self.redirections[443] = 8081
 
-    if redirections is not None:
-      r = redirections.split(',')
+    if args.redirections is not None:
+      r = args.redirections.split(',')
       for re in r:
         sport, dport = re.split(':')
         self.redirections[int(sport)] = int(dport)
         
-    if metasploit is not None:
-      self.start_metasploit(metasploit)
+    if args.metasploit is not None:
+      self.start_metasploit(args.metasploit)
   
   def log_login(self, client, user):
     client_ap = self.get_client_ap(client)
@@ -1486,7 +1486,11 @@ if __name__ == '__main__':
     forbidden = ()
     if args.forbidden is not None:
      forbidden = args.forbidden.split(',')
-    km = Karma2(args.logpath, args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan, args.debug, args.uri, forbidden)
+    args.forbidden = forbidden
+    #km = Karma2(args.logpath, args.gateway, args.monitor, args.hostapds, args.framework, args.tcpdump, args.redirections, args.offline, args.scan, args.debug, args.uri, forbidden)
+    
+    km = Karma2(args)
+    
     signal.signal(signal.SIGUSR1, km.status)
     signal.signal(signal.SIGUSR2, km.status)
     
