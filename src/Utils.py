@@ -55,6 +55,8 @@ class LineReader(object):
 class WLANInterface:
   def __init__(self, iface):
     self.iface = iface
+    # iw list | grep "valid interface combinations"
+    self.available_ap = 1
     self.available = True
 
   def str(self):
