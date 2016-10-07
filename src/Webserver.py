@@ -5,6 +5,7 @@ import os
 import ssl
 import base64
 import json
+import time
 
 from Utils import *
 
@@ -87,7 +88,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     fullpath =  "%s%s"%(host,self.path)
     essid = ""
     try:
-      essid = self.server.app.get_client_ap(client).essid
+      essid = self.server.app.get_client_ap(client).get_essid()
     except:
       pass
     
@@ -270,7 +271,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     
     essid = ""
     try:
-      essid = self.server.app.get_client_ap(client).essid
+      essid = self.server.app.get_client_ap(client).get_essid()
     except:
       pass
     protocol = ctxt(self.server.PRE,BLUE)
@@ -281,12 +282,13 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       self.server.app.log( "%s> %s:%s"%(ctxt(" |\\--",BLUE),k,self.headers.get(k)) )
     
     try:
-      authorization = self.headers.get('Authorization').split(' ')
-      if authorization[0] == 'Basic':
-        user_password = base64.b64decode(authorization[1])
-        login,password = user_password.split(':')
-        user = {'uri':fullpath,'login': login,  'password':password}
-        self.server.app.log_login(client, user)
+      if self.headers.get('Authorization') is not None:
+        authorization = self.headers.get('Authorization').split(' ')
+        if authorization[0] == 'Basic':
+          user_password = base64.b64decode(authorization[1])
+          login,password = user_password.split(':')
+          user = {'uri':fullpath,'login': login,  'password':password}
+          self.server.app.log_login(client, user)
     except Exception as e:
       print e
     
