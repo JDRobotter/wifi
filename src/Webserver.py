@@ -295,7 +295,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     # get content
     if self.headers.has_key('Content-Length'):
       length = int(self.headers['Content-Length'])
-      #post = self.rfile.read(length)
+      post = self.rfile.read(length)
 
       if host == 't.appsflyer.com' and path == 'api/v2.3/androidevent':
         model = self.headers.get('model')
