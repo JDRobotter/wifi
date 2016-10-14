@@ -239,7 +239,7 @@ class Karma2:
     return networkInterfaces
   
   def do_sniff(self):
-    if 'http' in self.ifmon:
+    if self.ifmon is not None and 'http' in self.ifmon:
       while True:
         try:
           req = urllib2.Request("%s/status.json"%self.ifmon)
