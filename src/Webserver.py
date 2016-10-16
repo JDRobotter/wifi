@@ -102,7 +102,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       protocol = ctxt(self.server.PRE,RED)
     self.server.app.log( "%s %s GET: %s => %s"%(essid,protocol,client,fullpath) )
 
-    self.server.app.guessr.feed_http_request(client_mac, self.server.PRE, self.path, params, self.headers)
+    self.server.app.guessr.feed_http_request(client_mac, self.server.PRE, path, params, self.headers)
 
     if len(self.headers) > 0:
       self.server.app.log( ctxt(" /headers", BLUE))

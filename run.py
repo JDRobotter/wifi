@@ -159,6 +159,9 @@ class Karma2:
       log( "could not update login")
   
   def update_dns(self, dns):
+    if 'bssid' in dns and 'host' in dns:
+      self.guessr.feed_dns_request(dns['bssid'], dns['host'])
+
     if self.uri is None:
       return
     try:

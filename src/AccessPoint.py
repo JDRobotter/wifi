@@ -288,7 +288,7 @@ class AccessPoint(Thread):
                       #self.setup_iface(self.ifhostapd.iface,subnet)
                     self.register_client(mac,ipsrc)
             if dns != {}: 
-              if self.karma.update_dns({'dns':dns}):
+              if self.karma.update_dns(dns):
                 self.karma.log( "[+] %s %s => %s"%(ctxt(self.get_essid(),GREEN), dns['bssid'], dns['host']))
           self.activity_ts = time.time()
 
