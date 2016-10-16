@@ -11,7 +11,6 @@ class POP3TCPRequestHandler(BaseRequestHandler):
       self.request.sendall('%s\r\n'%s)
 
     w('+OK POP3 server ready')
-    log('POP3: Connexion')
     user = {'uri':'pop3://??'}
     client = self.client_address[0]
     while True:

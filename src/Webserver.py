@@ -73,9 +73,14 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     return path,params,args
   
-  
+  def headers_to_text(self):
+    return '\n'.join([
+        "%s:%s"%(k,self.headers[k]) for k in self.headers.keys()
+      ])
+
   def do_GET(self):
     client = self.client_address[0]
+    client_mac = self.server.app.get_client_bssid(client)
     path,params,args = self._parse_url()
     host = self.headers.get('Host')
     if host is None:
@@ -96,6 +101,8 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     if self.server.PRE == 'HTTPS':
       protocol = ctxt(self.server.PRE,RED)
     self.server.app.log( "%s %s GET: %s => %s"%(essid,protocol,client,fullpath) )
+
+    self.server.app.guessr.feed_http_request(client_mac, self.server.PRE, self.path, params, self.headers)
 
     if len(self.headers) > 0:
       self.server.app.log( ctxt(" /headers", BLUE))
@@ -146,6 +153,10 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def logphishing():
       self.server.app.log("(%s)"%ctxt("phishing",YELLOW))
+
+    
+
+    faked = True
 
     if path == 'generate_204' or path == 'gen_204' or path == 'mobile/status.php':
       self.send_response(204)
@@ -262,9 +273,15 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     else:
       self.send_response(200)
       self.end_headers()
+      faked = False
+
+    uri = "%s://%s"%(self.server.PRE.lower(),fullpath)
+    self.server.app.db.new_service_request(
+      client_mac, 'HTTP', 'GET', uri, '', self.headers_to_text(), faked)
 
   def do_POST(self):
     client = self.client_address[0]
+    client_mac = self.server.app.get_client_bssid(client)
     path,params,args = self._parse_url()
     host = self.headers.get('Host')
     fullpath =  "%s/%s"%(host,path)
@@ -274,6 +291,9 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       essid = self.server.app.get_client_ap(client).get_essid()
     except:
       pass
+
+    self.server.app.guessr.feed_http_request(client_mac, self.server.PRE, self.path, params, self.headers)
+
     protocol = ctxt(self.server.PRE,BLUE)
     if self.server.PRE == 'HTTPS':
       protocol = ctxt(self.server.PRE,RED)
@@ -293,6 +313,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       print e
     
     # get content
+    post = ''
     if self.headers.has_key('Content-Length'):
       length = int(self.headers['Content-Length'])
       post = self.rfile.read(length)
@@ -327,8 +348,12 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     
     if path == 'gen_204':
       self.send_response(204)
-      self.end_headers()
-      return
-    
-    self.send_response(200)
+    else:
+      self.send_response(200)
+      
+    client_mac = self.server.app.get_client_bssid(client)
+    uri = "%s://%s"%(self.server.PRE.lower(),fullpath)
+    self.server.app.db.new_service_request(
+      client_mac, 'HTTP', 'POST', uri, post, self.headers_to_text(), False)
+
     self.end_headers()

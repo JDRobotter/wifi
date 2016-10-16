@@ -80,6 +80,7 @@ class AccessPoint(Thread):
       self.unused = False
       self.clients[mac] = ip
       self.karma.log( "new client %s (%s) %s"%(mac, ctxt(ip, GREEN), name))
+      self.karma.db.new_dhcp_lease(mac, ip, name)
       smb = SambaCrawler(self.karma, ip, 'smb_%s'%mac)
       smb.start()
       if self.karma.scan:
@@ -233,6 +234,7 @@ class AccessPoint(Thread):
               mac, = m.groups()
               if not self.clients.has_key(mac):
                 self.karma.log( "Client %s associated to %s"%(ctxt(mac,GREEN),ctxt(self.get_essid(),GREEN)))
+                self.karma.db.new_ap_connection(self.get_bssid(), self.get_essid(), mac)
                 self.unused = False
 
               self.activity_ts = time.time()
@@ -413,6 +415,9 @@ class AccessPoint(Thread):
 
   def get_essid(self):
     return '-'.join(self.essid)
+
+  def get_bssid(self):
+    return ','.join(self.bssid)
 
   def create_hostapd_access_point(self, essid, bssid, wpa2):
     bssid_text = ""
