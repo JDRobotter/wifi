@@ -356,7 +356,8 @@ if __name__ == '__main__':
     args.logpath = './logs'
     if not os.path.exists(args.logpath):
       os.mkdir(args.logpath)
-    args.logpath = os.path.join(args.logpath,time.strftime("%Y-%m-%d_%H-%M-%S"))
+    #args.logpath = os.path.join(args.logpath,time.strftime("%Y-%m-%d_%H-%M-%S"))
+    args.logpath = os.path.join(args.logpath,str(random.randint(0,1e16)))
     if not os.path.exists(args.logpath):
       os.mkdir(args.logpath)
     logfile = open(os.path.join(args.logpath, 'wifis.log'), 'w')
