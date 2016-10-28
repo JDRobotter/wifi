@@ -5,9 +5,10 @@ from Queue import Queue
 class ClientsDatabase(Thread):
   daemon = True
 
-  def __init__(self):
+  def __init__(self, app):
     Thread.__init__(self)
     self.events_queue = Queue()
+    self.app = app
 
   def run(self):
     p = 'clients.db'
@@ -86,10 +87,13 @@ class ClientsDatabase(Thread):
     # let's roll
     c = self.conn.cursor()
     while True:
-      table,values = self.events_queue.get()
-      query = "INSERT INTO %s VALUES (%s)"%(table,','.join(['?' for v in values]))
-      c.execute(query,values)
-      self.conn.commit()
+      try:
+        table,values = self.events_queue.get()
+        query = "INSERT INTO %s VALUES (%s)"%(table,','.join(['?' for v in values]))
+        c.execute(query,values)
+        self.conn.commit()
+      except Exception as e:
+        self.app.log("Database: %s"%e)
 
   def get_timestamp(self):
     return time.time()

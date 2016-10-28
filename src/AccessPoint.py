@@ -428,7 +428,7 @@ class AccessPoint(Thread):
     ifaces.append(interface)
     channel = random.randint(1,11)
     
-
+    print essid
     f = tempfile.NamedTemporaryFile(delete=False)
     f.write("interface=%s\n"%(interface))
     f.write("ssid=%s\n"%(essid[0]))

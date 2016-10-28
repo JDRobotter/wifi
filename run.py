@@ -107,7 +107,7 @@ class Karma2:
     if args.metasploit is not None:
       self.start_metasploit(args.metasploit)
   
-    self.db = ClientsDatabase()
+    self.db = ClientsDatabase(self)
     self.db.start()
 
     self.guessr = ServiceGuessr(self)
@@ -234,6 +234,8 @@ class Karma2:
 
       mbssids = bssids[:n]
       bssids = bssids[n:]
+      if messids == []:
+        break
 
       self.create_ap(iface, messids, mbssids, timeout)
 
@@ -252,7 +254,8 @@ class Karma2:
   def process_probe(self, essid, bssid = None):
     if (not essid in self.aps.keys()
             and not essid in self.forbidden_aps):
-            self.create_ap([essid], [bssid])
+            iface = self.ifhostapds.get_one()
+            self.create_ap(iface, [essid], [bssid])
   
   def getWirelessInterfacesList(self):
     networkInterfaces=[]		
