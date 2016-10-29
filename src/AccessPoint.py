@@ -261,15 +261,20 @@ class AccessPoint(Thread):
               if m is not None:
                 mac,host = m.groups()
                 dns = {
+                  'qtype':'CNAME',
                   'bssid': mac,
                   'host': host
                   }
             else:
-              if "AAAA?" in line or "A?" in line:
+              got_aaaa = "AAAA?" in line
+              got_a =    "A?" in line
+
+              if got_aaaa or got_a:
                 m = aaaa_watch_re.match(line)
                 if m is not None:
                   mac, ip, host = m.groups()
                   dns = {
+                    'qtype': 'AAAA' if got_aaaa else 'A',
                     'bssid': mac,
                     'host': host
                     }
@@ -280,7 +285,7 @@ class AccessPoint(Thread):
                 if m is not None:
                   mac, ipsrc, ipdst = m.groups()
                   if ipsrc == ipdst and mac != self.bssid:
-                    self.karma.log("[+] %s gratuitous arp from %s to %s"%(ctxt(self.get_essid(),GREEN), mac, ipdst))
+                    self.karma.log("%s Gratuitous arp from %s to %s"%(self.get_essid(), ctxt(mac,GREEN), ctxt(ipdst,GREEN)))
                     subnet_base = "%s.%%d"%('.'.join(ipsrc.split('.')[:3]))
                     subnet = IPSubnet(subnet_base)
                     #if self.subnet.gateway() != subnet.gateway():
@@ -288,8 +293,9 @@ class AccessPoint(Thread):
                       #self.setup_iface(self.ifhostapd.iface,subnet)
                     self.register_client(mac,ipsrc)
             if dns != {}: 
-              if self.karma.update_dns(dns):
-                self.karma.log( "[+] %s %s => %s"%(ctxt(self.get_essid(),GREEN), dns['bssid'], dns['host']))
+              self.karma.update_dns(dns)
+              self.karma.log( "%s %s"%(self.get_essid(), 
+                ctxt("%s => %s"%(dns['bssid'], dns['host']),GREY)))
           self.activity_ts = time.time()
 
   def nmap(self, ip):

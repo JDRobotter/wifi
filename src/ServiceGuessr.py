@@ -51,6 +51,22 @@ class ServiceGuessr:
     m = re.match(r'skydrive.wns.windows.com', host)
     if m is not None:
       self.karma.db.new_service(client_mac, "app", "skydrive", '', '')
+
+    m = re.match(r'\w\+.whatsapp.net', host)
+    if m is not None:
+      self.karma.db.new_service(client_mac, "app", "whatsapp", '', '')
+      return
+
+    if host in ('portal.fb.com',):
+      self.karma.db.new_service(client_mac, "app", "facebook", '', '')
+      return
+
+    if host in ('graph.instagram.com','i.instagram.com'):
+      self.karma.db.new_service(client_mac, "app", "instagram", '', '')
+      return
+
+    if host in ('dailymotion-mobile-compute.appspot.com',):
+      self.karma.db.new_service(client_mac, "app", "dailymotion", '', '')
       return
 
   def feed_http_request(self, client_mac, protocol, path, params, headers):

@@ -85,11 +85,6 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     host = self.headers.get('Host')
     if host is None:
       host = ''
-    dns = {
-      'bssid': self.server.app.get_client_bssid(client),
-      'host': host
-      }
-    self.server.app.update_dns(dns)
     fullpath =  "%s%s"%(host,self.path)
     essid = ""
     try:

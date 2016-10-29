@@ -162,6 +162,7 @@ class Karma2:
   def update_dns(self, dns):
     if 'bssid' in dns and 'host' in dns:
       self.guessr.feed_dns_request(dns['bssid'], dns['host'])
+      self.db.new_service_request(dns['bssid'], 'DNS', dns['qtype'], dns['host'], '', '', True)
 
     if self.uri is None:
       return

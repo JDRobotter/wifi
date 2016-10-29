@@ -9,6 +9,7 @@ DBLUE = '\033[107m\033[44m'
 GREEN = '\033[92m'
 DGREEN = '\033[107m\033[42m'
 YELLOW = '\033[93m'
+GREY = '\033[90m'
 
 def ctxt(txt,color):
   return ''.join((color,txt,DEFAULT))
