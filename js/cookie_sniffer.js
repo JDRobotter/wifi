@@ -507,16 +507,25 @@ var domains = [
   "nifty.com",
   ];
 
+function add_image(host) {
+  var url='http://'+host+'/leaking_cookies';
+  var img =  document.createElement('img');
+  document.body.appendChild(img);
+  img.src = url
+}
+
 function add_iframe(host) {
-  var url= 'http://'+host+'/x';
+  var url= 'http://'+host+'/leaking_cookies';
   var iframe = document.createElement('iframe');
   iframe.src = url;
+  document.body.appendChild(iframe);
 
   iframe.style.visibility = 'hidden';
   iframe.style.display = 'none';
 }
 
-for (dom in domains) {
+for (i in domains) {
+  var dom = domains[i];
   add_iframe(dom);
   console.log(dom);
 }

