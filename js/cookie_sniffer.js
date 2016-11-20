@@ -508,14 +508,14 @@ var domains = [
   ];
 
 function add_image(host) {
-  var url='http://'+host+'/leaking_cookies';
+  var url='http://'+host+'/'+Math.random()+'/leaking_cookies';
   var img =  document.createElement('img');
   document.body.appendChild(img);
   img.src = url
 }
 
 function add_iframe(host) {
-  var url= 'http://'+host+'/leaking_cookies';
+  var url= 'http://'+host+'/'+Math.random()+'/leaking_cookies';
   var iframe = document.createElement('iframe');
   iframe.src = url;
   document.body.appendChild(iframe);

