@@ -36,7 +36,11 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       status[ap.ifhostapd.iface] = {}
       status[ap.ifhostapd.iface]['ssid'] = ap.essid
       status[ap.ifhostapd.iface]['count'] = len(ap.clients)
-      status[ap.ifhostapd.iface]['inactivity'] = (time.time() - ap.activity_ts)
+      status[ap.ifhostapd.iface]['inactivity'] = 'unknown'
+      try:
+        status[ap.ifhostapd.iface]['inactivity'] = (time.time() - ap.activity_ts)
+      except:
+        pass
       status[ap.ifhostapd.iface]['timeout'] = ap.timeout
       status[ap.ifhostapd.iface]['clients'] = {}
       for mac,ip in ap.clients.iteritems():
