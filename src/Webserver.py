@@ -107,23 +107,20 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         # use a Cookie.SimpleCookie to deserialize data
         ck = Cookie.SimpleCookie()
         ck.load(ckdata)
-        
         # create a cookie jar to export data
         cjar = cookielib.MozillaCookieJar('/tmp/%s.cookie.txt'%host)
         for k,v in ck.items():
           cjar.set_cookie(cookielib.Cookie(1,
-            k, v, '80', '80',
+            k, v.value, '80', '80',
             host, None, None, 
-            path, None, 
+            '/', None, 
             False, 
-            False,
+            None,
             False,
             "",
             "",
             False))
         cjar.save()
-
-        print host,cjar
 
       return
 
