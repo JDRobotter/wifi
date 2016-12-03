@@ -427,7 +427,7 @@ class AccessPoint(Thread):
 
   def create_hostapd_access_point(self, essid, bssid, wpa2):
     bssid_text = ""
-    bssid_text = " with bssid %s"%len(bssid)
+    bssid_text = " with bssid %s"%bssid
     self.karma.log( "[+] Creating (hostapd) AP %s %s"%(ctxt(self.get_essid(),GREEN),bssid_text))
     ifaces = []
     interface = self.ifhostapd.str()

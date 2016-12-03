@@ -1,0 +1,11 @@
+{
+  "name": "wifiap",
+  "version": "0.0.0",
+  "dependencies": {
+    "angular": "~1.4.0",
+    "bootstrap-sass-official": "~3.1.1",
+    "bootstrap": "~3.1.1",
+    "jquery-ui": "^1.11.4",
+    "jquery": "^2.2.3",
+  }
+}

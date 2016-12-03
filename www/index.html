@@ -1,0 +1,32 @@
+<!DOCTYPE html> 
+<html>
+<head> 
+<title>wifis</title>
+<script src="/js/components/jquery/dist/jquery.js"></script>
+<script src="/js/components/jquery-ui/jquery-ui.js"></script>
+<script src="/js/components/angular/angular.js"></script>
+<script src="/js/components/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/index.js"></script>
+<link rel="stylesheet" href="/js/components/bootstrap/dist/css/bootstrap.min.css" media="screen" />
+<!-- <link rel="stylesheet" href="/js/components/font-awesome/css/font-awesome.min.css" /> -->
+<link rel="stylesheet" href="/css/main.css" />
+</head>
+<body ng-app="wifis">
+    <div ng-controller="indexController" class="container">
+      <ul>
+      <li ng-repeat="interface in status">
+        <h3>{{interface.ssid[0]}}</h3>
+        <ul>
+          <li ng-repeat="client in interface.clients">
+          {{client}}
+          </li>
+        </ul>
+        <div>
+          {{interface.inactivity}} / {{interface.timeout}}
+        </div>
+      </li>
+    </ul>
+    </div>
+</body>
+</html>

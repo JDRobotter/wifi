@@ -79,5 +79,4 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       path = 'index.html'
     elif len(args) == 1 and args[0] == 'status.json':
       return self._get_status()
-    else:
-      return self._get_file(path) 
+    return self._get_file(path) 
