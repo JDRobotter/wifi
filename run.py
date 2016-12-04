@@ -134,13 +134,13 @@ class Karma2:
   def get_client_ap(self,ip):
     for essid,ap in self.aps.iteritems():
       for m,c in ap.clients.iteritems():
-        if c == ip:
+        if c == c['ip']:
           return ap
 
   def get_client_bssid(self, ip):
     for essid,ap in self.aps.iteritems():
       for m,c in ap.clients.iteritems():
-        if c == ip:
+        if c['ip'] == ip:
           return m
   
   def getMacFromIface(self, _iface):

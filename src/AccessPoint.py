@@ -78,7 +78,7 @@ class AccessPoint(Thread):
   def register_client(self, mac,ip, name = ""):
     if not self.clients.has_key(mac):
       self.unused = False
-      self.clients[mac] = ip
+      self.clients[mac] = {'ip':ip, 'post':[], 'name': name}
       self.karma.log( "new client %s (%s) %s"%(mac, ctxt(ip, GREEN), name))
       self.karma.db.new_dhcp_lease(mac, ip, name)
       smb = SambaCrawler(self.karma, ip, 'smb_%s'%mac)
@@ -213,14 +213,14 @@ class AccessPoint(Thread):
               if m is not None:
                 ip,mac,name = m.groups()
                 self.register_client(mac, ip, name)
-              #else:
+              else:
                 # this regexp seems to be really slow
-                #m = disassociated_re.match(line)
+                m = disassociated_re.match(line)
                 #print "000022"
-                #if m is not None:
-                  #mac = m.groups()
-                  #self.karma.log( "dissociated %s"%mac)
-                  #self.clients.pop(mac,None)
+                if m is not None:
+                  mac = m.groups()
+                  self.karma.log( "dissociated %s"%mac)
+                  self.clients.pop(mac,None)
 
       if airfd in rlist:
         lr = LineReader(self.hostapd_process.stdout.fileno())
@@ -243,10 +243,7 @@ class AccessPoint(Thread):
               if m is not None:
                 ifname, = m.groups()
                 self.karma.log( "%s Unable to start hostapd on interface %s: %s"%(ctxt("[!]",RED),ctxt(ifname,RED), line))
-                # will remove AP from list on next check
-                self.activity_ts = None  
-                if self.karma.debug:
-                  print hostapd_error
+                self.restart()
 
       if connwfd in rlist:
         lr = LineReader(self.connectionwatch_process.stdout.fileno())
@@ -297,6 +294,12 @@ class AccessPoint(Thread):
               self.karma.log( "%s %s"%(self.get_essid(), 
                 ctxt("%s => %s"%(dns['bssid'], dns['host']),GREY)))
           self.activity_ts = time.time()
+
+  def restart(self):
+    # will remove AP from list on next check
+    self.activity_ts = None  
+    if self.karma.debug:
+      print hostapd_error
 
   def nmap(self, ip):
     self.karma.log( "[+] nmapping %s"%ip)

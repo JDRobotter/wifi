@@ -17,14 +17,30 @@
       <ul>
       <li ng-repeat="interface in status">
         <h3>{{interface.ssid[0]}}</h3>
-        <ul>
-          <li ng-repeat="client in interface.clients">
-          {{client}}
-          </li>
-        </ul>
         <div>
           {{interface.inactivity}} / {{interface.timeout}}
         </div>
+        <ul>
+          <li ng-repeat="(mac, client) in interface.clients">
+            <b/>{{client.name}}</b> {{mac}} <b>{{client.ip}}</b>
+            <ul>
+              <li ng-repeat="(name,service) in client.services">
+                {{service.type}} {{name}}
+              </li>
+            </ul>
+            <hr/>
+            <ul>
+              <li ng-repeat="post in client.post">
+                {{post}}
+              </li>
+            </ul>
+            <ul style="display:none">
+              <li ng-repeat="host in client.dns">
+                {{host}}
+              </li>
+            </ul>
+          </li>
+        </ul>
       </li>
     </ul>
     </div>

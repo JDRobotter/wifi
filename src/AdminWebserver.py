@@ -43,8 +43,11 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
         pass
       status[ap.ifhostapd.iface]['timeout'] = ap.timeout
       status[ap.ifhostapd.iface]['clients'] = {}
-      for mac,ip in ap.clients.iteritems():
-        status[ap.ifhostapd.iface]['clients'][mac] = ip
+      for mac,client in ap.clients.iteritems():
+        client['services'] = self.server.app.guessr.get_services(mac)
+        client['dns'] = self.server.app.guessr.get_dns(mac)
+        status[ap.ifhostapd.iface]['clients'][mac] = client
+        
     
     
     data = json.dumps(status, ensure_ascii=False)

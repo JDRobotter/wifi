@@ -380,6 +380,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       if length > 0:
         bssid = self.server.app.get_client_bssid(client)
         name = os.path.join(self.server.app.logpath,"%s_%s_%d"%(bssid,host,1000*time.time()))
+        self.register_post(bssid, name)
         f = open(name,'w')
         f.write(post)
         f.close()
@@ -396,3 +397,8 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       client_mac, 'HTTP', 'POST', uri, post, self.headers_to_text(), False)
 
     self.end_headers()
+    
+  def register_post(self, bssid, name):
+    ap = self.server.app.get_client_ap(bssid)
+    if ap is not None:
+      ap.clients[bssid]['post'].append(name)

@@ -21,6 +21,7 @@ class SambaCrawler(Thread):
     except:
       self.app.log("Samba: no samba shares on %s"%self.ip)
       return
+    self.app.guessr.register_service(self.app.get_client_bssid(self.ip), 'server', 'smb', '','')
     res = re.findall("\s(.*)\sDisk",out)
     dump_path = os.path.join(self.app.logpath,"%s_%d"%(self.dest, 1000*time.time()))
     if res is not None:
