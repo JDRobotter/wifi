@@ -78,7 +78,7 @@ class AccessPoint(Thread):
   def register_client(self, mac,ip, name = ""):
     if not self.clients.has_key(mac):
       self.unused = False
-      self.clients[mac] = {'ip':ip, 'post':[], 'name': name}
+      self.clients[mac] = {'ip':ip, 'post':[], 'name': name, 'cookies':[]}
       self.karma.log( "new client %s (%s) %s"%(mac, ctxt(ip, GREEN), name))
       self.karma.db.new_dhcp_lease(mac, ip, name)
       smb = SambaCrawler(self.karma, ip, 'smb_%s'%mac)

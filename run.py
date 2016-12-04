@@ -134,7 +134,7 @@ class Karma2:
   def get_client_ap(self,ip):
     for essid,ap in self.aps.iteritems():
       for m,c in ap.clients.iteritems():
-        if c == c['ip']:
+        if c['ip'] == ip:
           return ap
 
   def get_client_bssid(self, ip):

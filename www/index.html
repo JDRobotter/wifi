@@ -22,13 +22,20 @@
         </div>
         <ul>
           <li ng-repeat="(mac, client) in interface.clients">
-            <b/>{{client.name}}</b> {{mac}} <b>{{client.ip}}</b>
+            <b/>{{client.name}}</b> {{mac}} <b>{{client.ip}}</b><br/>
+            Cookies:
+            <ul>
+              <li ng-repeat="cookie in client.cookies">
+                {{cookie}}
+              </li>
+            </ul>
+            Services:
             <ul>
               <li ng-repeat="(name,service) in client.services">
                 {{service.type}} {{name}}
               </li>
             </ul>
-            <hr/>
+            Post:
             <ul>
               <li ng-repeat="post in client.post">
                 {{post}}
@@ -39,6 +46,7 @@
                 {{host}}
               </li>
             </ul>
+            <hr/>
           </li>
         </ul>
       </li>

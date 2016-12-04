@@ -148,15 +148,14 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           http_auth))
         
     if 'cookie' in self.headers:
-        bssid = self.server.app.get_client_bssid(client)
-        
+        self.register_cookie(client_mac, client, host)
         ckdata = self.headers['Cookie']
         
         # use a Cookie.SimpleCookie to deserialize data
         ck = Cookie.SimpleCookie()
         ck.load(ckdata)
         # create a cookie jar to export data
-        name = os.path.join(self.server.app.logpath, '%s_%s.cookie.txt'%(bssid,host))
+        name = os.path.join(self.server.app.logpath, '%s_%s.cookie.txt'%(client_mac,host))
         cjar = cookielib.MozillaCookieJar(name)
         for k,v in ck.items():
           cjar.set_cookie(cookielib.Cookie(1,
@@ -398,6 +397,12 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     self.end_headers()
     
+  def register_cookie(self,bssid, ip, host):
+    ap = self.server.app.get_client_ap(ip)
+    if ap is not None:
+      if not host in ap.clients[bssid]['cookies']:
+        ap.clients[bssid]['cookies'].append(host)
+      
   def register_post(self, bssid, name):
     ap = self.server.app.get_client_ap(bssid)
     if ap is not None:
