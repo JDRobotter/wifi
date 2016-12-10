@@ -111,7 +111,7 @@ class AccessPoint(Thread):
             self.tcpdump_process.wait()
           except:
             self.karma.log( "%s could not kill tcpdump"%ctxt("[!]",RED))
-          if self.karma.tcpdump and self.unused and not self.karma.debug:
+          if self.karma.tcpdump and self.unused and not self.karma.debug and not self.karma.wpa:
             try:
               self.karma.log( "[-] deleting %s"%self.logfile)
               os.remove(self.logfile)

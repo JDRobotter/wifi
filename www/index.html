@@ -26,7 +26,7 @@
             Cookies:
             <ul>
               <li ng-repeat="cookie in client.cookies">
-                {{cookie}}
+                <a href="/cookie.txt?bssid={{mac}}&host={{cookie}}" >{{cookie}}</a>
               </li>
             </ul>
             Services:

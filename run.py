@@ -38,6 +38,7 @@ def parse_args():
     parser.add_argument("-e", "--enable", help="Choose the monitor interface to enable")
     parser.add_argument("-a", "--hostapds", help="List of interfaces which will be used to create aps")
     parser.add_argument("-n", "--name", action="append", help="start this given essid with optional bssid ie myWifi,00:27:22:35:07:70")
+    parser.add_argument("-w", "--wpa", action='store_true', help="start probed ap with wpa security")
     parser.add_argument("-f", "--metasploit", help="path to the metasploit console")
     parser.add_argument("-t", "--tcpdump", action='store_true', help="run tcpdump on interface")
     parser.add_argument("-o", "--offline", action='store_true', help="offline mode")
@@ -69,7 +70,7 @@ class Karma2:
     if not os.path.exists(self.logpath):
       os.mkdir(self.logpath)
     
-    
+    self.wpa = args.wpa
     self.ifmon = args.monitor
     self.ifgw = args.gateway
     self.ifhostapds = WLANInterfaces(args.hostapds)
@@ -236,15 +237,16 @@ class Karma2:
       mbssids = bssids[:n]
       bssids = bssids[n:]
       if messids == []:
+        self.ifhostapds.free_one(iface)
         break
 
       self.create_ap(iface, messids, mbssids, timeout)
 
-  def create_ap(self, iface, essid, bssid=None, timeout=30):
+  def create_ap(self, iface, essid, bssid=None, timeout=30, wpa=None):
     if iface is None:
       return
     if iface.available_ap >= len(essid):
-      ap = AccessPoint(self, iface, essid, bssid, timeout)
+      ap = AccessPoint(self, iface, essid, bssid, timeout, wpa)
       for e in essid:
         self.register_ap(e,ap)
       ap.daemon = True
@@ -256,7 +258,10 @@ class Karma2:
     if (not essid in self.aps.keys()
             and not essid in self.forbidden_aps):
             iface = self.ifhostapds.get_one()
-            self.create_ap(iface, [essid], [bssid])
+            wpa = None
+            if args.wpa is not None:
+              wpa = "glopglopglop"
+            self.create_ap(iface, [essid], [bssid], 30, wpa)
   
   def getWirelessInterfacesList(self):
     networkInterfaces=[]		
@@ -274,6 +279,7 @@ class Karma2:
   def do_sniff(self):
     if self.ifmon is not None and 'http' in self.ifmon:
       while True:
+        data = None
         try:
           req = urllib2.Request("%s/status.json"%self.ifmon)
           f = urllib2.urlopen(req)
@@ -295,6 +301,12 @@ class Karma2:
                 self.process_probe(p['essid'], bssid)
         except Exception as e:
           log( "Probes %s"%e)
+          try:
+            f = open("/tmp/wifi-probes.json", 'w')
+            f.write(data)
+            f.close()
+          except Exception as e:
+            log("probes backup %s"%e)
         time.sleep(0.5)
     else:
       def _filter(packet):

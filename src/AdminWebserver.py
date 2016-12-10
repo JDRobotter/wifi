@@ -57,6 +57,10 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       print e
       print data
   
+  def _get_cookie(self, _bssid, _host):
+    path = os.path.join(self.server.app.logpath, '%s_%s.cookie.txt'%(_bssid,host))
+    return self._get_file(path)
+  
   def _get_file(self, path):
     _path = os.path.join(self.server.www_directory,path)
     if os.path.exists(_path):
@@ -82,4 +86,11 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       path = 'index.html'
     elif len(args) == 1 and args[0] == 'status.json':
       return self._get_status()
+    elif len(args) == 1 and args[0] == 'cookie.txt':
+      if params is not None:
+        m = re.match(
+            r"bssid=(.*)\&host=(.*)",params)
+        if m is not None:
+          bssid,host = m.groups()
+          return self._get_cookie(bssid, host)
     return self._get_file(path) 
