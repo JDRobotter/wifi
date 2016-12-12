@@ -35,6 +35,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     for essid,ap in self.server.app.aps.iteritems():
       status[ap.ifhostapd.iface] = {}
       status[ap.ifhostapd.iface]['ssid'] = ap.essid
+      status[ap.ifhostapd.iface]['status'] = ap.status
       status[ap.ifhostapd.iface]['count'] = len(ap.clients)
       status[ap.ifhostapd.iface]['inactivity'] = 'unknown'
       try:
@@ -46,6 +47,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       for mac,client in ap.clients.iteritems():
         client['services'] = self.server.app.guessr.get_services(mac)
         client['dns'] = self.server.app.guessr.get_dns(mac)
+        client['device'] = self.server.app.guessr.get_device(mac)
         status[ap.ifhostapd.iface]['clients'][mac] = client
         
     
@@ -76,6 +78,23 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
             self.wfile.write(data)
         except IOError as e:
               self.send_500(str(e))
+  
+  
+  def create(self, ap):
+    data = json.loads(ap,strict=False)
+    self.server.app.create_aps([data['essid']], [None], data['timeout'])
+    
+  
+  def do_POST(self):
+    path,params,args = self._parse_url()
+    if ('..' in args) or ('.' in args):
+      self.send_400()
+      return
+    length = int(self.headers['Content-Length'])
+    post = self.rfile.read(length)
+    post = post.decode('string-escape').strip('"')
+    if len(args) == 1 and args[0] == 'create.json':
+      return self.create(post)
   
   def do_GET(self):
     path,params,args = self._parse_url()

@@ -11,6 +11,7 @@ from Utils import *
 class AccessPoint(Thread):
   def __init__(self, karma, ifhostapd, essid, bssid, timeout, wpa2=None, fishing=True):
     Thread.__init__(self)
+    self.status = 'creating'
     self.essid = essid
     self.bssid = []
     for e in essid:
@@ -74,11 +75,13 @@ class AccessPoint(Thread):
       stderr=subprocess.PIPE)
     return p
             
+  def client_ping(self, mac):
+    self.clients[mac]['last_activity'] = time.time()
   
   def register_client(self, mac,ip, name = ""):
     if not self.clients.has_key(mac):
       self.unused = False
-      self.clients[mac] = {'ip':ip, 'post':[], 'name': name, 'cookies':[]}
+      self.clients[mac] = {'ip':ip, 'post':[], 'name': name, 'cookies':[],'last_activity': time.time()}
       self.karma.log( "new client %s (%s) %s"%(mac, ctxt(ip, GREEN), name))
       self.karma.db.new_dhcp_lease(mac, ip, name)
       smb = SambaCrawler(self.karma, ip, 'smb_%s'%mac)
@@ -91,9 +94,11 @@ class AccessPoint(Thread):
   
   def run(self):
     set_title('hostapd %s'%self.get_essid())
+    self.status = 'running'
     self.karma.log( "[+] now running" )
     
     def _killall():
+        self.status = 'stopping'
         try:
           self.dhcpd_process.kill()
           self.dhcpd_process.wait()
@@ -213,14 +218,14 @@ class AccessPoint(Thread):
               if m is not None:
                 ip,mac,name = m.groups()
                 self.register_client(mac, ip, name)
-              else:
+              #else:
                 # this regexp seems to be really slow
-                m = disassociated_re.match(line)
-                #print "000022"
-                if m is not None:
-                  mac = m.groups()
-                  self.karma.log( "dissociated %s"%mac)
-                  self.clients.pop(mac,None)
+                #m = disassociated_re.match(line)
+                ##print "000022"
+                #if m is not None:
+                  #mac = m.groups()
+                  #self.karma.log( "dissociated %s"%mac)
+                  #self.clients.pop(mac,None)
 
       if airfd in rlist:
         lr = LineReader(self.hostapd_process.stdout.fileno())
@@ -289,7 +294,8 @@ class AccessPoint(Thread):
                       #self.karma.log("[+] switching to %s"%(ctxt(subnet.gateway(), GREEN)))
                       #self.setup_iface(self.ifhostapd.iface,subnet)
                     self.register_client(mac,ipsrc)
-            if dns != {}: 
+            if dns != {}:
+              self.client_ping(dns['bssid'])
               self.karma.update_dns(dns)
               self.karma.log( "%s %s"%(self.get_essid(), 
                 ctxt("%s => %s"%(dns['bssid'], dns['host']),GREY)))

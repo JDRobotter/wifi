@@ -7,6 +7,7 @@ class ServiceGuessr:
     self.karma = karma
     self.services = {}
     self.dns = {}
+    self.devices = {}
 
   def split_params(self, params):
     kvs = {}
@@ -30,6 +31,11 @@ class ServiceGuessr:
     if not self.services.has_key(mac):
       return []
     return self.services[mac]
+  
+  def get_device(self, mac):
+    if not self.devices.has_key(mac):
+      return {}
+    return self.devices[mac]
 
   def register_service(self, client_mac, service_type, service_name, service_version, service_extra):
     self.karma.db.new_service(client_mac, service_type, service_name, service_version, service_extra)
@@ -56,8 +62,14 @@ class ServiceGuessr:
       self.register_service(client_mac, "app", "airbnb", '', '')
       return
     
-    if host in ('dropbox.com',):
+    m = re.match(r'.*dropbox.com$',host)
+    if m is not None:
       self.register_service(client_mac, "app", "dropbox", '', '')
+      return
+    
+    m = re.match(r'.*bitdefender.com',host)
+    if m is not None:
+      self.register_service(client_mac, "antivirus", "bitdefender", '', '')
       return
     
     if host in ('incoming.telemetry.mozilla.org',):
@@ -69,7 +81,7 @@ class ServiceGuessr:
       self.register_service(client_mac, "app", "skype", '', '')
       return
 
-    m = re.match(r'\w\+-mtalk.google.com',host)
+    m = re.match(r'.*mtalk.google.com$',host)
     if m is not None:
       self.register_service(client_mac, "app", "gtalk", '', '')
       return
@@ -113,6 +125,12 @@ class ServiceGuessr:
       infos = ua_parse(ua_string)
 
       if infos.device.brand is not None and infos.device.model is not None:
+        if not self.devices.has_key(client_mac):
+          self.devices[client_mac]= {
+            'brand': infos.device.brand,
+            'model': infos.device.model,
+            'family': infos.device.family
+            }
         self.karma.db.new_device(client_mac,
           infos.device.brand,
           infos.device.model,
@@ -149,6 +167,11 @@ class ServiceGuessr:
     # voyage sncf
     if path.startswith('ext/editorial/inApp'):
       self.register_service(client_mac, "app", "voyages-sncf", '', path)
+
+
+    if host in ('ctldl.windowsupdate.com',):
+      self.register_service(client_mac, "os", "windows-update", '', '')
+      return
 
     # WINDOWS 10 live tiles
     elif ((re.match(r'\w\w-\w\w/video/feeds',path) is not None)
