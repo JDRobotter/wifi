@@ -40,7 +40,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       status[ap.ifhostapd.iface]['count'] = len(ap.clients)
       status[ap.ifhostapd.iface]['inactivity'] = 'unknown'
       try:
-        status[ap.ifhostapd.iface]['inactivity'] = (time.time() - ap.activity_ts)
+        status[ap.ifhostapd.iface]['inactivity'] = int(time.time() - ap.activity_ts)
       except:
         pass
       status[ap.ifhostapd.iface]['timeout'] = ap.timeout
@@ -50,6 +50,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
         client['dns'] = self.server.app.guessr.get_dns(mac)
         client['device'] = self.server.app.guessr.get_device(mac)
         status[ap.ifhostapd.iface]['clients'][mac] = client
+        client['inactivity'] = int( time.time() - client['last_activity'])
         
     
     

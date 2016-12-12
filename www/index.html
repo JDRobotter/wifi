@@ -28,31 +28,40 @@
         <ul>
           <li ng-repeat="(mac, client) in interface.clients">
             <b/>{{client.name}}</b> {{mac}} <b>{{client.ip}}</b><br/>
-            {{client.last_activity}}<br/>
+            {{client.inactivity}}<br/>
             <b>{{client.device.brand}}</b> {{client.device.model}}<br/>
-            Cookies:
-            <ul>
-              <li ng-repeat="cookie in client.cookies">
-                <a href="/cookie.txt?bssid={{mac}}&host={{cookie}}" >{{cookie}}</a>
-              </li>
-            </ul>
-            Services:
-            <ul>
-              <li ng-repeat="(name,service) in client.services">
-                {{service.type}} {{name}}
-              </li>
-            </ul>
-            Post:
-            <ul>
-              <li ng-repeat="post in client.post">
-                {{post}}
-              </li>
-            </ul>
-            <ul style="display:none">
-              <li ng-repeat="host in client.dns">
-                {{host}}
-              </li>
-            </ul>
+            <div ng-if="client.cookies.length > 0">
+              Cookies:
+              <ul>
+                <li ng-repeat="cookie in client.cookies">
+                  <a href="/cookie.txt?bssid={{mac}}&host={{cookie}}" >{{cookie}}</a>
+                </li>
+              </ul>
+            </div>
+            <div ng-if="client.services.length > 0">
+              Services:
+              <ul>
+                <li ng-repeat="(name,service) in client.services">
+                  {{service.type}} {{name}}
+                </li>
+              </ul>
+            </div>
+            <div ng-if="client.post.length > 0">
+              Post:
+              <ul>
+                <li ng-repeat="post in client.post">
+                  {{post}}
+                </li>
+              </ul>
+            </div>
+            <button ng-if="client.dns.length > 0" ng-click="showdns = !showdns" >Toggle dns ({{client.dns.length}})</button>
+            <div ng-show="showdns" >
+              <ul>
+                <li ng-repeat="host in client.dns">
+                  {{host}}
+                </li>
+              </ul>
+            </div>
             <hr/>
           </li>
         </ul>
