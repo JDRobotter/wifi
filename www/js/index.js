@@ -8,6 +8,7 @@ app.controller("indexController", function($http, $scope, $location) {
       var data = {
         essid: $scope.create_essid,
         timeout: $scope.create_timeout,
+        wpa: $scope.create_password,
       };
       
       var config = {

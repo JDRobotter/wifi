@@ -14,10 +14,11 @@ class AccessPoint(Thread):
     self.status = 'creating'
     self.essid = essid
     self.bssid = []
-    for e in essid:
-      self.bssid.append(karma.getMacFromIface(ifhostapd.str()))
-    if len(bssid) > 1:
-      self.bssid = bssid
+    if bssid is not None:
+      for e in essid:
+        self.bssid.append(karma.getMacFromIface(ifhostapd.str()))
+      if len(bssid) > 1:
+        self.bssid = bssid
     self.karma = karma
     self.timeout = timeout
     self.wpa2 = wpa2
@@ -98,7 +99,8 @@ class AccessPoint(Thread):
     self.karma.log( "[+] now running" )
     
     def _killall():
-        self.status = 'stopping'
+        self.status = 'stopped'
+        self.activity_ts = None
         try:
           self.dhcpd_process.kill()
           self.dhcpd_process.wait()
@@ -447,8 +449,9 @@ class AccessPoint(Thread):
     f = tempfile.NamedTemporaryFile(delete=False)
     f.write("interface=%s\n"%(interface))
     f.write("ssid=%s\n"%(essid[0]))
-    if bssid[0] is not None:
-      f.write("bssid=%s\n"%(bssid))
+    if bssid is not None:
+      if bssid[0] is not None:
+        f.write("bssid=%s\n"%(bssid))
     f.write("channel=%s\n"%(channel))
     f.write("hw_mode=g\n")
     f.write("ieee80211n=1\n")
@@ -465,9 +468,10 @@ class AccessPoint(Thread):
       ifaces.append(interface)
       f.write("bss=%s"%interface)
       f.write("ssid=%s\n"%e)
-      if bssid[i] is not None:
-        f.write("bssid=%s\n"%(bssid[i]))
-      i += 1
+      if bssid is not None:
+        if bssid[i] is not None:
+          f.write("bssid=%s\n"%(bssid[i]))
+        i += 1
     
     f.close()
     cmd = ["hostapd","-d",f.name]

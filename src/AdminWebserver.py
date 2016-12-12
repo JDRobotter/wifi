@@ -35,6 +35,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     for essid,ap in self.server.app.aps.iteritems():
       status[ap.ifhostapd.iface] = {}
       status[ap.ifhostapd.iface]['ssid'] = ap.essid
+      status[ap.ifhostapd.iface]['wpa2'] = ap.wpa2 != None
       status[ap.ifhostapd.iface]['status'] = ap.status
       status[ap.ifhostapd.iface]['count'] = len(ap.clients)
       status[ap.ifhostapd.iface]['inactivity'] = 'unknown'
@@ -82,7 +83,11 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
   
   def create(self, ap):
     data = json.loads(ap,strict=False)
-    self.server.app.create_aps([data['essid']], [None], data['timeout'])
+    wpa = None
+    if data['wpa'] != "":
+      wpa = data['wpa']
+    iface = self.server.app.ifhostapds.get_one()
+    self.server.app.create_ap(iface, [data['essid']], None, data['timeout'], wpa)
     
   
   def do_POST(self):

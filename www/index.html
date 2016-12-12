@@ -15,13 +15,13 @@
 <body ng-app="wifis">
     <div ng-controller="indexController" class="container">
     <form>
-    <input ng-model="create_essid" > <input type="number" ng-model="create_timeout" value="30" />
+    name: <input ng-model="create_essid" > timeout: <input type="number" ng-model="create_timeout" value="30" /> password: <input ng-model="create_password" type="password" >
     <button ng-click="create()" >Create</button>
     </form>
     
       <ul>
       <li ng-repeat="interface in status">
-        <h3>{{interface.ssid[0]}}</h3> {{interface.status}}
+        <h3><img src="/img/locked.png" alt="locked" ng-if="interface.wpa2"> {{interface.ssid[0]}} </h3> {{interface.status}}
         <div>
           {{interface.inactivity}} / {{interface.timeout}}
         </div>
