@@ -49,6 +49,7 @@ def parse_args():
     parser.add_argument("-u", "--uri", help="wifiScanMap sync uri")
     parser.add_argument("-b", "--forbidden", help="list of forBidden essid")
     parser.add_argument("-l", "--logpath", help="log path")
+    parser.add_argument("-z", "--hostapd", help="hostapd binary path")
     parser.add_argument("-q", "--test", action='store_true', help="run test mode")
     return parser.parse_args()
 
@@ -86,6 +87,7 @@ class Karma2:
     self.forbidden_aps = args.forbidden
     self.KEYFILE = KEYFILE
     self.CERTFILE = CERTFILE
+    self.args = args
 
     self.redirections = {}
 
@@ -350,12 +352,19 @@ class Karma2:
 
 if __name__ == '__main__':
 
+  # parse command line
+  args = parse_args()
+
 
   from distutils.spawn import find_executable
 
   CHECK_EXECUTABLES = (
-    'hostapd','nmap','iptables','tcpdump','dnsmasq','airmon-ng', 'smbclient',
+    'nmap','iptables','tcpdump','dnsmasq','airmon-ng', 'smbclient',
   )
+  
+  if args.hostapd is None:
+    CHECK_EXECUTABLES.append('hostapd')
+
 
   # check for executables
   do_not_run = False
@@ -366,8 +375,6 @@ if __name__ == '__main__':
   if do_not_run:
     sys.exit(-1)
 
-  # parse command line
-  args = parse_args()
   if args.enable is not None:
     cmd = ['airmon-ng','start',args.enable]
     p = subprocess.Popen(cmd,

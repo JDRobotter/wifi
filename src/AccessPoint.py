@@ -97,10 +97,13 @@ class AccessPoint(Thread):
     set_title('hostapd %s'%self.get_essid())
     self.status = 'running'
     self.karma.log( "[+] now running" )
+    hostapd_log = None
     
     def _killall():
         self.status = 'stopped'
         self.activity_ts = None
+        if hostapd_log is not None:
+          hostapd_log.close()
         try:
           self.dhcpd_process.kill()
           self.dhcpd_process.wait()
@@ -163,7 +166,14 @@ class AccessPoint(Thread):
     aaaa_watch_re = re.compile(r"(\w+:\w+:\w+:\w+:\w+:\w+) >.*length \d+:\s([0-9\.]+)\.\d+.*A\?*\s([a-z0-9-\.]+)\..*")
     arp_watch_re = re.compile(r"(\w+:\w+:\w+:\w+:\w+:\w+) > .*\b((?:[0-9]{1,3}\.){3}[0-9]{1,3})\b tell \b((?:[0-9]{1,3}\.){3}[0-9]{1,3})\b")
     hostapd_error = ""
+    if self.karma.debug:
+      path = os.path.join(self.karma.logpath,"hostapd_%s_%s"%(self.get_essid(),datetime.now().strftime("%Y%m%d-%H%M%S")))
+      hostapd_log = open(path,'w')
     while True:
+      self.hostapd_process.poll()
+      if self.hostapd_process.returncode is not None:
+        self.activity_ts = None
+      
       # check alive
       if self.activity_ts is None:
         self.karma.log( "%s Unable to create an AP for %s"%(ctxt("[!]",RED),self.get_essid()))
@@ -234,6 +244,8 @@ class AccessPoint(Thread):
         lines = lr.readlines()
         for line in lines:
           if len(line) != 0:
+            if hostapd_log is not None:
+              hostapd_log.write("%s\n"%line)
             hostapd_error = "%s%s"%(hostapd_error,line)
             #print "hostapd  %s"%line
             m = authenticated_re.match(line)
@@ -474,7 +486,12 @@ class AccessPoint(Thread):
         i += 1
     
     f.close()
-    cmd = ["hostapd","-d",f.name]
+    
+    exe = "hostapd"
+    if self.karma.args.hostapd is not None:
+      exe = self.karma.args.hostapd
+    
+    cmd = [exe,"-d",f.name]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return ifaces,p
 
