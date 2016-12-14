@@ -90,6 +90,10 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     iface = self.server.app.ifhostapds.get_one()
     self.server.app.create_ap(iface, [data['essid']], None, data['timeout'], wpa)
     
+  def delete(self, ap):
+    data = json.loads(ap,strict=False)
+    essid = data['essid']
+    self.server.app.aps[essid].timeout = 0
   
   def do_POST(self):
     path,params,args = self._parse_url()
@@ -101,6 +105,8 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     post = post.decode('string-escape').strip('"')
     if len(args) == 1 and args[0] == 'create.json':
       return self.create(post)
+    if len(args) == 1 and args[0] == 'delete.json':
+      return self.delete(post)
   
   def do_GET(self):
     path,params,args = self._parse_url()

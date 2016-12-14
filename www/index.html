@@ -21,7 +21,7 @@
     
       <ul>
       <li ng-repeat="interface in status">
-        <h3><img src="/img/locked.png" alt="locked" ng-if="interface.wpa2"> {{interface.ssid[0]}} </h3> {{interface.status}}
+        <h3><img src="/img/locked.png" alt="locked" ng-if="interface.wpa2"> {{interface.ssid[0]}} </h3> {{interface.status}} <button ng-click="delete(interface.ssid[0])" >Delete</button>
         <div>
           {{interface.inactivity}} / {{interface.timeout}}
         </div>

@@ -173,6 +173,8 @@ class AccessPoint(Thread):
       self.hostapd_process.poll()
       if self.hostapd_process.returncode is not None:
         self.activity_ts = None
+        _killall()
+        return
       
       # check alive
       if self.activity_ts is None:
