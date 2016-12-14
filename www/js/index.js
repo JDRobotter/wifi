@@ -1,6 +1,7 @@
 app.controller("indexController", function($http, $scope, $location) {
     $scope.status = {};
-    
+    $scope.total_clients = 0;
+    $scope.showdns = false;
     var refresh_timeout = 2000;
     
     $scope.create = function() {
@@ -30,6 +31,10 @@ app.controller("indexController", function($http, $scope, $location) {
         $http.get('/status.json').then(response => {
             
             $scope.status = response.data;
+            $scope.total_clients = 0;
+            for( i in $scope.status) {
+              $scope.total_clients += $scope.status[i].count
+            }
             setTimeout($scope.refresh, refresh_timeout)
         }, function errorCallback(response) {
             console.log(response)

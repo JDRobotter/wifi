@@ -89,6 +89,9 @@ class Karma2:
     self.CERTFILE = CERTFILE
     self.args = args
 
+    self.ignore_bssid = []
+    for i in self.locals_interfaces:
+      self.ignore_bssid.append(self.getMacFromIface(i))
     self.redirections = {}
 
     if not args.offline:
@@ -299,7 +302,7 @@ class Karma2:
                 found = True
                 break
             if not found:
-              if not p['bssid'] in self.locals_interfaces:
+              if not p['bssid'] in self.ignore_bssid:
                 self.process_probe(p['essid'], bssid)
         except Exception as e:
           log( "Probes %s"%e)

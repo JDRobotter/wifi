@@ -1,7 +1,7 @@
 <!DOCTYPE html> 
-<html>
+<html ng-app="wifis" ng-controller="indexController"  >
 <head> 
-<title>wifis</title>
+<title>wifis ({{total_clients}})</title>
 <script src="/js/components/jquery/dist/jquery.js"></script>
 <script src="/js/components/jquery-ui/jquery-ui.js"></script>
 <script src="/js/components/angular/angular.js"></script>
@@ -12,8 +12,8 @@
 <!-- <link rel="stylesheet" href="/js/components/font-awesome/css/font-awesome.min.css" /> -->
 <link rel="stylesheet" href="/css/main.css" />
 </head>
-<body ng-app="wifis">
-    <div ng-controller="indexController" class="container">
+<body>
+    <div class="container">
     <form>
     name: <input ng-model="create_essid" > timeout: <input type="number" ng-model="create_timeout" value="30" /> password: <input ng-model="create_password" type="password" >
     <button ng-click="create()" >Create</button>

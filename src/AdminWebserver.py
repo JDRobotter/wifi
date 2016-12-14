@@ -85,7 +85,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
   def create(self, ap):
     data = json.loads(ap,strict=False)
     wpa = None
-    if data['wpa'] != "":
+    if data.has_key('wpa') and data['wpa'] != "":
       wpa = data['wpa']
     iface = self.server.app.ifhostapds.get_one()
     self.server.app.create_ap(iface, [data['essid']], None, data['timeout'], wpa)

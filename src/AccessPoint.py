@@ -80,7 +80,7 @@ class AccessPoint(Thread):
     self.clients[mac]['last_activity'] = time.time()
   
   def register_client(self, mac,ip, name = ""):
-    if not self.clients.has_key(mac):
+    if not self.clients.has_key(mac) and not mac in self.karma.ignore_bssid:
       self.unused = False
       self.clients[mac] = {'ip':ip, 'post':[], 'name': name, 'cookies':[],'last_activity': time.time()}
       self.karma.log( "new client %s (%s) %s"%(mac, ctxt(ip, GREEN), name))
@@ -251,10 +251,11 @@ class AccessPoint(Thread):
             m = authenticated_re.match(line)
             if m is not None:
               mac, = m.groups()
-              if not self.clients.has_key(mac):
+              if not self.clients.has_key(mac) and not mac in self.karma.ignore_bssid:
                 self.karma.log( "Client %s associated to %s"%(ctxt(mac,GREEN),ctxt(self.get_essid(),GREEN)))
-                self.karma.db.new_ap_connection(self.get_bssid(), self.get_essid(), mac)
-                self.unused = False
+                if mac not in self.karma.ignore_bssid:
+                  self.karma.db.new_ap_connection(self.get_bssid(), self.get_essid(), mac)
+                  self.unused = False
 
               self.activity_ts = time.time()
             else:
@@ -300,7 +301,7 @@ class AccessPoint(Thread):
                 m = arp_watch_re.match(line)
                 if m is not None:
                   mac, ipsrc, ipdst = m.groups()
-                  if ipsrc == ipdst and mac != self.bssid:
+                  if ipsrc == ipdst and mac not in self.karma.ignore_bssid:
                     self.karma.log("%s Gratuitous arp from %s to %s"%(self.get_essid(), ctxt(mac,GREEN), ctxt(ipdst,GREEN)))
                     subnet_base = "%s.%%d"%('.'.join(ipsrc.split('.')[:3]))
                     subnet = IPSubnet(subnet_base)
@@ -309,11 +310,12 @@ class AccessPoint(Thread):
                       #self.setup_iface(self.ifhostapd.iface,subnet)
                     self.register_client(mac,ipsrc)
             if dns != {}:
-              self.client_ping(dns['bssid'])
-              self.karma.update_dns(dns)
-              self.karma.log( "%s %s"%(self.get_essid(), 
-                ctxt("%s => %s"%(dns['bssid'], dns['host']),GREY)))
-          self.activity_ts = time.time()
+              if dns['bssid'] not in self.karma.ignore_bssid:
+                self.client_ping(dns['bssid'])
+                self.karma.update_dns(dns)
+                self.karma.log( "%s %s"%(self.get_essid(), 
+                  ctxt("%s => %s"%(dns['bssid'], dns['host']),GREY)))
+            self.activity_ts = time.time()
 
   def restart(self):
     # will remove AP from list on next check
