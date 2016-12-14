@@ -361,9 +361,9 @@ if __name__ == '__main__':
 
   from distutils.spawn import find_executable
 
-  CHECK_EXECUTABLES = (
+  CHECK_EXECUTABLES = [
     'nmap','iptables','tcpdump','dnsmasq','airmon-ng', 'smbclient',
-  )
+  ]
   
   if args.hostapd is None:
     CHECK_EXECUTABLES.append('hostapd')
