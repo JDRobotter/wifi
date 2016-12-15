@@ -26,6 +26,25 @@ app.controller("indexController", function($http, $scope, $location) {
       });
     }
     
+    $scope.getid = function(mac) {
+      return mac.replace(/:/g , "_");
+    }
+    
+    $scope.toggle_dns = function(mac) {
+      var id = $scope.getid(mac);
+      $("#dns_"+id).toggle();
+    }
+    
+    $scope.toggle_client = function(mac) {
+      var id = $scope.getid(mac);
+      $("#client_"+id).toggle();
+    }
+    
+    $scope.iface_toggle = function(mac) {
+      var id = $scope.getid(mac);
+      $("#iface_"+id).toggle();
+    }
+    
     $scope.delete = function(essid) {
       var data = {
         essid: essid

@@ -98,12 +98,16 @@ class AccessPoint(Thread):
     self.status = 'running'
     self.karma.log( "[+] now running" )
     hostapd_log = None
+    keep_hostapd_log = False
     
     def _killall():
         self.status = 'stopped'
         self.activity_ts = None
-        if hostapd_log is not None:
-          hostapd_log.close()
+        hostapd_log.close()
+        
+        if not (self.karma.debug or keep_hostapd_log):
+          os.remove(hostapd_log.name)
+          
         try:
           self.dhcpd_process.kill()
           self.dhcpd_process.wait()
@@ -165,10 +169,8 @@ class AccessPoint(Thread):
     cname_watch_re = re.compile(r".* > (\w+:\w+:\w+:\w+:\w+:\w+).*CNAME*\s([a-z0-9-\.]+)\..*")
     aaaa_watch_re = re.compile(r"(\w+:\w+:\w+:\w+:\w+:\w+) >.*length \d+:\s([0-9\.]+)\.\d+.*A\?*\s([a-z0-9-\.]+)\..*")
     arp_watch_re = re.compile(r"(\w+:\w+:\w+:\w+:\w+:\w+) > .*\b((?:[0-9]{1,3}\.){3}[0-9]{1,3})\b tell \b((?:[0-9]{1,3}\.){3}[0-9]{1,3})\b")
-    hostapd_error = ""
-    if self.karma.debug:
-      path = os.path.join(self.karma.logpath,"hostapd_%s_%s"%(self.get_essid(),datetime.now().strftime("%Y%m%d-%H%M%S")))
-      hostapd_log = open(path,'w')
+    path = os.path.join(self.karma.logpath,"hostapd_%s_%s"%(self.get_essid(),datetime.now().strftime("%Y%m%d-%H%M%S")))
+    hostapd_log = open(path,'w')
     while True:
       self.hostapd_process.poll()
       if self.hostapd_process.returncode is not None:
@@ -248,7 +250,6 @@ class AccessPoint(Thread):
           if len(line) != 0:
             if hostapd_log is not None:
               hostapd_log.write("%s\n"%line)
-            hostapd_error = "%s%s"%(hostapd_error,line)
             #print "hostapd  %s"%line
             m = authenticated_re.match(line)
             if m is not None:
@@ -263,6 +264,7 @@ class AccessPoint(Thread):
             else:
               m = hostapd_fails_re.match(line)
               if m is not None:
+                keep_hostapd_log = True
                 ifname, = m.groups()
                 self.karma.log( "%s Unable to start hostapd on interface %s: %s"%(ctxt("[!]",RED),ctxt(ifname,RED), line))
                 self.restart()

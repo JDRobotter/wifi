@@ -51,6 +51,8 @@ def parse_args():
     parser.add_argument("-l", "--logpath", help="log path")
     parser.add_argument("-z", "--hostapd", help="hostapd binary path")
     parser.add_argument("-q", "--test", action='store_true', help="run test mode")
+    parser.add_argument("-p", "--port", help="admin webserver port")
+    parser.add_argument('-i', '--ignore', help='ignore bssid ie. -i mac1 mac2 macN', action='append', nargs='*')
     return parser.parse_args()
 
 log_lock = Lock()
@@ -90,8 +92,12 @@ class Karma2:
     self.args = args
 
     self.ignore_bssid = []
+    if args.ignore is not None:
+      self.ignore_bssid = args.ignore[0]
     for i in self.locals_interfaces:
       self.ignore_bssid.append(self.getMacFromIface(i))
+    print self.ignore_bssid
+      
     self.redirections = {}
 
     if not args.offline:
@@ -424,7 +430,8 @@ if __name__ == '__main__':
     signal.signal(signal.SIGUSR1, km.status)
     signal.signal(signal.SIGUSR2, km.status)
     
-    km.start_adminserver(km, 9999)
+    if args.port is not None:
+      km.start_adminserver(km, int(args.port))
     
     if args.offline:
       km.start_webserver(km, km.redirections[80], km.redirections[443])
