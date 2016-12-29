@@ -1,0 +1,32 @@
+<md-content class="md-padding" layout-xs="column" layout="row">
+  <div flex-xs flex-gt-xs="50" layout="column">
+    <md-card 
+      ng-repeat="(name,infos) in status"
+      md-theme="{{ showDarkTheme ? 'dark-grey' : 'default' }}" md-theme-watch>
+
+      <!-- card title -->
+      <md-card-title>
+        <md-card-title-text>
+          <span class="md-headline">{{infos.ssid[0]}}</span>
+          <span class="md-subhead">{{name}}</span>
+        </md-card-title-text>
+      </md-card-title>
+      
+      <!-- card content -->
+      <md-card-content>
+        <md-list class="md-dense" flex>
+          <md-list-item class="md-3-line" ng-repeat="(mac,client) in infos.clients" ng-click="null">
+
+            <i class="material-icons md-36 md-avatar">phone_android</i>
+            <div class="md-list-item-text" layout="column">
+              <h3>{{mac}}</h3>
+							<h4>{{client.name}}</h4>
+							<p>kokezrkezofkofk</p>
+            </div>
+          </md-list-item>
+        </md-list>
+      </md-card-content>
+    </md-card>
+  </div>
+
+</md-content>

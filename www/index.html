@@ -1,76 +1,50 @@
-<!DOCTYPE html> 
-<html ng-app="wifis" ng-controller="indexController"  >
-<head> 
-<title>wifis ({{total_clients}})</title>
-<script src="/js/components/jquery/dist/jquery.js"></script>
-<script src="/js/components/jquery-ui/jquery-ui.js"></script>
-<script src="/js/components/angular/angular.js"></script>
-<script src="/js/components/bootstrap/dist/js/bootstrap.min.js"></script>
-<script src="/js/app.js"></script>
-<script src="/js/index.js"></script>
-<link rel="stylesheet" href="/js/components/bootstrap/dist/css/bootstrap.min.css" media="screen" />
-<!-- <link rel="stylesheet" href="/js/components/font-awesome/css/font-awesome.min.css" /> -->
-<link rel="stylesheet" href="main.css" />
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="description" content="">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+
+  <title>Wifi App</title>
+  <link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Roboto:400,700'>
+  <link rel="stylesheet" href="./assets/app.css"/>
+  <link rel="stylesheet" href="./src/components/angular-material/angular-material.css"/>
+
+  <style>
+
+
+  </style>
+
 </head>
-<body>
-    <div class="container">
-    <form>
-    name: <input ng-model="create_essid" > timeout: <input type="number" ng-model="create_timeout" value="30" /> password: <input ng-model="create_password" type="password" >
-    <button ng-click="create()" >Create</button>
-    </form>
-    
-      <ul>
-      <li ng-repeat="(iface, ssid) in status">
-        <h3><img src="/img/locked.png" alt="locked" ng-if="ssid.wpa2"> <a href="#" ng-click="iface_toggle(iface)" >{{ssid.ssid[0]}}</a> </h3> {{ssid.status}} <button ng-click="delete(ssid.ssid[0])" ng-if="ssid.status == 'running'" >Delete</button>
-        <div id="iface_{{getid(iface)}}" ng-class="{unavailable: (ssid.status != 'running')}" >
-          <div>
-            {{ssid.inactivity}} / {{ssid.timeout}}
-          </div>
-          <ul>
-            <li ng-repeat="(mac, client) in ssid.clients">
-            <b/><a href="#" ng-click="toggle_client(mac)">{{client.name}}</a></b> {{mac}} <b>{{client.ip}}</b><br/>
-              <div id="client_{{getid(mac)}}" ng-class="{unavailable: (client.inactivity > 60)}" >
-                {{client.inactivity}}<br/>
-                <b>{{client.device.brand}}</b> {{client.device.model}}<br/>
-                <div ng-if="client.cookies.length > 0">
-                  Cookies:
-                  <ul>
-                    <li ng-repeat="cookie in client.cookies">
-                      <a href="/cookie.txt?bssid={{mac}}&host={{cookie}}" >{{cookie}}</a>
-                    </li>
-                  </ul>
-                </div>
-                <div ng-if="client.services.length > 0">
-                  Services:
-                  <ul>
-                    <li ng-repeat="(name,service) in client.services">
-                      {{service.type}} {{name}}
-                    </li>
-                  </ul>
-                </div>
-                <div ng-if="client.post.length > 0">
-                  Post:
-                  <ul>
-                    <li ng-repeat="post in client.post">
-                      {{post}}
-                    </li>
-                  </ul>
-                </div>
-                <button ng-if="client.dns.length > 0" ng-click="toggle_dns(mac)" >Toggle dns ({{client.dns.length}})</button>
-                <div id="dns_{{getid(mac)}}" >
-                  <ul>
-                    <li ng-repeat="host in client.dns">
-                      {{host}}
-                    </li>
-                  </ul>
-                </div>
-              </div>
-              <hr/>
-            </li>
-          </ul>
-        </div>
-      </li>
-    </ul>
-    </div>
+
+<body ng-app="starter-app" layout="column" ng-controller="AppController as app">
+
+  <!-- Container #1 (see wireframe) -->
+  <md-toolbar layout="row" class="md-toolbar-tools">
+    <h1>WIFI - title</h1>
+  </md-toolbar>
+
+
+  <md-content class="md-padding">
+    <md-nav-bar nav-bar-aria-label="navigation links">
+      <md-nav-item md-nav-href="#!/home">Home</md-nav-item>
+      <md-nav-item md-nav-href="#!/aps" name="page_aps">APs</md-nav-item>
+      <md-nav-item md-nav-href="#!/clients" name="page_clients">Clients</md-nav-item>
+      <md-nav-item md-nav-href="#!/infos">About</md-nav-item>
+    </md-nav-bar>
+
+    <!-- angular ui router template insertion -->
+    <div id="content" ui-view></div>
+  </md-content>
+
+  <script src="./src/components/angular/angular.js"></script>
+  <script src="./src/components/angular-material/angular-material.js"></script>
+  <script src="./src/components/angular-aria/angular-aria.js"></script>
+  <script src="./src/components/angular-animate/angular-animate.js"></script>
+  <script src="./src/components/angular-messages/angular-messages.js"></script>
+  <script src="./src/components/angular-ui-router/release/angular-ui-router.js"></script>
+  <script src="./src/app.js" type="text/javascript"></script>
+
 </body>
 </html>
