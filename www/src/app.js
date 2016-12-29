@@ -1,8 +1,26 @@
 
-function AppController($http, $scope) {
+function AppController($http, $scope, $mdDialog) {
   var self = this;
 
   var refresh_timeout_ms = 2000;
+
+	$scope.changeSSID = function(ev) {
+	}
+  $scope.showChangeSSIDDialog = function(ev) {
+    $mdDialog.show({
+      controller: ChangeSSIDDialogController,
+      templateUrl: 'templates/change_ssid.html',
+      parent: angular.element(document.body),
+      targetEvent: ev,
+      clickOutsideToClose:true,
+      fullscreen: $scope.customFullscreen // Only for -xs, -sm breakpoints.
+    })
+    .then(function(answer) {
+			// XXX TBD
+    }, function() {
+			// XXX TBD
+    });
+  };
 
   $scope.refresh = function() {
     $http.get('status.json').then(response => {
@@ -18,6 +36,20 @@ function AppController($http, $scope) {
 
   }
   $scope.refresh();
+}
+
+function ChangeSSIDDialogController($scope, $mdDialog) {
+  $scope.hide = function() {
+    $mdDialog.hide();
+  };
+
+  $scope.cancel = function() {
+    $mdDialog.cancel();
+  };
+
+  $scope.answer = function(answer) {
+    $mdDialog.hide(answer);
+  };
 }
 
 function HomePageController($scope) {

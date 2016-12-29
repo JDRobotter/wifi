@@ -1,0 +1,34 @@
+<md-dialog aria-label="Change SSID">
+  <form ng-cloak>
+
+    <md-toolbar>
+      <div class="md-toolbar-tools">
+        <h2>Set new SSID</h2>
+        <span flex></span>
+        <md-button class="md-icon-button" ng-click="cancel()">
+          <i class="material-icons">close</i>
+        </md-button>
+      </div>
+    </md-toolbar>
+
+		<md-dialog-content>
+		<div class="md-dialog-content">
+			<md-input-container>
+				<label>New SSID</label>
+				<input ng-model="new_ssid"></input>
+			</md-input-container>
+		</div>
+		</md-dialog-content>
+
+    <md-dialog-actions layout="row">
+      <span flex></span>
+      <md-button ng-click="answer('not useful')" >
+        Cancel
+      </md-button>
+      <md-button ng-click="answer(new_ssid)" style="margin-right:20px;" >
+        Set
+      </md-button>
+    </md-dialog-actions>
+
+	</form>
+</md-dialog>
