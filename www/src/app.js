@@ -2,7 +2,7 @@
 function AppController($http, $scope, $mdDialog) {
   var self = this;
 
-  var refresh_timeout_ms = 2000;
+  var refresh_timeout_ms = 1000;
 
 	$scope.changeSSID = function(ev) {
 	}
@@ -22,10 +22,48 @@ function AppController($http, $scope, $mdDialog) {
     });
   };
 
+  $scope.getIconFromDevice = function(device) {
+    if(device.brand == "Apple") {
+      if(device.model.startsWith("iPad")) {
+        return "tablet_mac";
+      }
+      else {
+        return "tablet_android";
+      }
+    }
+    else {
+      return "phone_android";
+    }
+  }
+
+  getIconFromService = function(name,infos) {
+    console.log(name,infos);
+    if(name == 'facebook-messenger') {
+      return {"type":"img","src":"assets/facebook-messenger.svg"}
+    }
+    else if(name == 'imap-gmail') {
+      return {"type":"img","src":"assets/gmail.svg"}
+
+    }
+    else if(name == 'facebook') {
+      return {"type":"img","src":"assets/facebook.svg"}
+    }
+    return {"type":"i","src":"stars"}
+  }
+ 
   $scope.refresh = function() {
-    $http.get('status.json').then(response => {
+    $http.get('http://192.168.1.10:8082/status.json').then(response => {
 
         $scope.status = response.data;
+        
+        // update services with corresponding icons
+        angular.forEach($scope.status, function(iface,k) {
+          angular.forEach(iface["clients"], function(client,k) {
+            angular.forEach(client["services"], function(sinfos,sname) {
+              sinfos.icon = getIconFromService(sname,sinfos);
+            });
+          });
+        });
 
         setTimeout($scope.refresh, refresh_timeout_ms);
       },
