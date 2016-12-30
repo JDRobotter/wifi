@@ -4,6 +4,7 @@ from SocketServer import ThreadingMixIn, TCPServer, BaseRequestHandler
 import os
 from Webserver import *
 from Utils import *
+import urlparse
 
 class AdminWebserver(Thread):
   daemon=True
@@ -28,6 +29,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
   
   def _get_status(self):
     self.send_response(200)
+    self.send_header('Access-Control-Allow-Origin','*')
     self.end_headers()
     
     status = {}
@@ -82,6 +84,17 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
               self.send_500(str(e))
   
   
+  def _query(self, query, num):
+
+    self.send_response(200)
+    self.end_headers()
+
+    db = self.server.app.db
+
+    obj = db.fetch_last_requests('all',num)
+
+    self.wfile.write(json.dumps(obj))
+
   def create(self, ap):
     data = json.loads(ap,strict=False)
     wpa = None
@@ -97,6 +110,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
   
   def do_POST(self):
     path,params,args = self._parse_url()
+    dparams = {} if params is None else urlparse.parse_qs(params)
     if ('..' in args) or ('.' in args):
       self.send_400()
       return
@@ -110,18 +124,29 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
   
   def do_GET(self):
     path,params,args = self._parse_url()
+    dparams = {} if params is None else urlparse.parse_qs(params)
     if ('..' in args) or ('.' in args):
-      self.send_400()
+      self.send_response(400)
+      self.end_headers()
       return
     if len(args) == 1 and args[0] == '':
       path = 'index.html'
+
+    elif len(args) == 1 and args[0] == 'query.json':
+      if 'q' in dparams and 'n' in dparams:
+        (q,),(n,) = dparams['q'],dparams['n']
+        print q,n
+        self._query(q,n)
+        return
+      else:
+        self.send_response(400)
+        self.end_headers()
+        return
+
     elif len(args) == 1 and args[0] == 'status.json':
       return self._get_status()
     elif len(args) == 1 and args[0] == 'cookie.txt':
-      if params is not None:
-        m = re.match(
-            r"bssid=(.*)\&host=(.*)",params)
-        if m is not None:
-          bssid,host = m.groups()
-          return self._get_cookie(bssid, host)
+      if 'bssid' in dparams and 'host' in dparams:
+        (bssid,),(host,) = dparams['bssid'], dparams['host']
+        return self._get_cookie(bssid, host)
     return self._get_file(path) 

@@ -2,7 +2,9 @@
 function AppController($http, $scope, $mdDialog) {
   var self = this;
 
-  var refresh_timeout_ms = 1000;
+  var refresh_timeout_ms = 2000;
+
+  break_refresh_loop = false;
 
 	$scope.changeSSID = function(ev) {
 	}
@@ -36,23 +38,53 @@ function AppController($http, $scope, $mdDialog) {
     }
   }
 
+  $scope.getColorFromRequest = function(r) {
+    if(r.service_name == 'HTTP') {
+      return '#4caf50';
+    }else if(r.service_name == 'DNS') {
+      return '#00bcd4';
+    }
+  }
+  
+  $scope.getIconFromRequest = function(r) {
+    if(r.service_name == 'HTTP') {
+      return 'http';
+    }
+    else if(r.service_name == 'DNS') {
+      return 'dns';
+    }
+    else {
+      return 'play_arrow';
+    }
+  }
   getIconFromService = function(name,infos) {
-    console.log(name,infos);
     if(name == 'facebook-messenger') {
-      return {"type":"img","src":"assets/facebook-messenger.svg"}
+      return {"type":"md-icon","src":"assets/facebook-messenger.svg"}
     }
     else if(name == 'imap-gmail') {
-      return {"type":"img","src":"assets/gmail.svg"}
-
+      return {"type":"md-icon","src":"assets/gmail.svg"}
     }
     else if(name == 'facebook') {
-      return {"type":"img","src":"assets/facebook.svg"}
+      return {"type":"md-icon","src":"assets/facebook.svg"}
     }
-    return {"type":"i","src":"stars"}
+    else if(name == 'gtalk') {
+      return {"type":"img","src":"assets/hangout.png"}
+    }
+    else if(name == 'openweathermap') {
+      return {"type":"img","src":"assets/openweathermap.png"}
+    }
+    else if(infos.type == 'browser') {
+      return {"type":"i","src":"picture_in_picture"}
+    }
+    else {
+      return {"type":"i","src":"help"}
+    }
   }
  
   $scope.refresh = function() {
-    $http.get('http://192.168.1.10:8082/status.json').then(response => {
+
+    // fetch status
+    $http.get('/status.json').then(response => {
 
         $scope.status = response.data;
         
@@ -64,14 +96,22 @@ function AppController($http, $scope, $mdDialog) {
             });
           });
         });
-
-        setTimeout($scope.refresh, refresh_timeout_ms);
       },
       function errorCallback(response) {
         console.log(response);
-        setTimeout($scope.refresh, refresh_timeout_ms);
       });
 
+    $http.get('/query.json?q=all&n=100').then(response => {
+        console.log("up");
+        $scope.requests = response.data;
+      },
+      function errorCallback(response) {
+        console.log(response);
+    });
+
+    if(!break_refresh_loop) {
+      setTimeout($scope.refresh, refresh_timeout_ms);
+    }
   }
   $scope.refresh();
 }
@@ -90,22 +130,6 @@ function ChangeSSIDDialogController($scope, $mdDialog) {
   };
 }
 
-function HomePageController($scope) {
-
-}
-
-function APsPageController($scope) {
-
-}
-
-function ClientsPageController($scope) {
-
-}
-
-function InfosPageController($scope) {
-
-}
-
 var app = angular.module( 'starter-app', ['ngMaterial','ui.router'])
   .config(['$stateProvider','$urlRouterProvider', 
     function($stateProvider,$urlRouterProvider) {
@@ -116,26 +140,22 @@ var app = angular.module( 'starter-app', ['ngMaterial','ui.router'])
         .state('home', {
           url:'/',
           templateUrl:'templates/home.html',
-          controller:'HomePageController'
         })
         .state('aps', {
           url:'/aps',
           templateUrl:'templates/aps.html',
-          controller:'APsPageController'
         })
         .state('clients', {
           url:'/clients',
           templateUrl:'templates/clients.html',
-          controller:'ClientsPageController'
+        })
+        .state('requests', {
+          url:'/requests',
+          templateUrl:'templates/requests.html',
         })
         .state('infos', {
           url:'/infos',
           templateUrl:'templates/infos.html',
-          controller:'InfosPageController'
         })
     }])
-  .controller('AppController', AppController)
-  .controller('HomePageController', HomePageController)
-  .controller('APsPageController', APsPageController)
-  .controller('ClientsPageController', ClientsPageController)
-  .controller('InfosPageController', InfosPageController);
+  .controller('AppController', AppController);

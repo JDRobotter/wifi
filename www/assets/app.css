@@ -50,6 +50,19 @@
 .material-icons.md-light.md-inactive { color: rgba(255, 255, 255, 0.3); }
 
 .service-icon {
-  width:36px !important;
-  height:36px !important;
+  width:34px !important;
+  height:34px !important;
+
+  padding: 2px;
+}
+
+.request-list-item {
+  border-bottom: 1px solid #ddd;
+}
+
+.request-icon-avatar {
+  padding: 5px;
+  margin: 5px;
+  margin-left: 0px;
+  border-radius: 50%;
 }

@@ -371,7 +371,7 @@ if __name__ == '__main__':
     'nmap','iptables','tcpdump','dnsmasq','airmon-ng', 'smbclient',
   ]
   
-  if args.hostapd is None:
+  if args.hostapd is not None:
     CHECK_EXECUTABLES.append('hostapd')
 
 
@@ -418,7 +418,10 @@ if __name__ == '__main__':
     os.symlink(src, sl)
 
   try:
-    args.hostapds = args.hostapds.split(',')
+    if args.hostapds is None:
+      args.hostapds = []
+    else:
+      args.hostapds = args.hostapds.split(',')
 
     forbidden = ()
     if args.forbidden is not None:

@@ -88,10 +88,34 @@ class ClientsDatabase(Thread):
     c = self.conn.cursor()
     while True:
       try:
-        table,values = self.events_queue.get()
-        query = "INSERT INTO %s VALUES (%s)"%(table,','.join(['?' for v in values]))
-        c.execute(query,values)
-        self.conn.commit()
+        action,table,values,outqueue = self.events_queue.get()
+        if action == 'insert':
+          query = "INSERT INTO %s VALUES (%s)"%(table,','.join(['?' for v in values]))
+          c.execute(query,values)
+          self.conn.commit()
+        elif action == 'fetch':
+          
+          _where,_orderby,_limit = values
+
+          def _ef(fmt,s):
+            if s is None:
+              return ''
+            else:
+              return fmt%s
+
+          where = _ef("WHERE %s",_where)
+          orderby = _ef("ORDER BY %s",_orderby)
+          limit = _ef("LIMIT %s",_limit)
+
+          query = "SELECT * FROM %s"%' '.join((table,where,orderby,limit))
+          print query
+          c.execute(query)
+          
+          # push results into queue
+          outqueue.put([row for row in c])
+
+        else:
+          pass
       except Exception as e:
         self.app.log("Database: %s"%e)
 
@@ -102,7 +126,20 @@ class ClientsDatabase(Thread):
     return time.asctime()
 
   def insert_values(self, table, values):
-    self.events_queue.put((table,[('' if v is None else v) for v in values]))
+    self.events_queue.put(('insert',table,[('' if v is None else v) for v in values],None))
+
+  def fetch_last_requests(self, rtype, num):
+    queue = Queue()
+    where = None
+    if rtype == 'all':
+      where = None 
+    self.events_queue.put(('fetch','service_request',[where,"timestamp desc",num],queue))
+
+    vs = queue.get()
+
+    header = ('date','timestamp','client_mac','service_name','service_request','service_uri','service_params','service_header','was_faked')
+    
+    return [dict(zip(header,v)) for v in vs]
 
   def new_ap_connection(self, ap_bssid, ap_essid, client_mac):
     self.insert_values('ap_connections', (

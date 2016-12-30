@@ -1,0 +1,27 @@
+<md-content class="md-padding">
+
+
+  <md-list flex>
+    <md-list-item class="md-2-line request-list-item" layout="row"
+      ng-repeat="request in requests"
+      >
+      <div flex layout="row">
+        <md-icon class="request-icon-avatar"
+          ng-style='{"background-color":"{{getColorFromRequest(request)}}"}'>
+          {{getIconFromRequest(request)}}
+        </md-icon>
+        <div class="md-list-item-text" layout="column" flex>
+          <h3><b
+               ng-style='{"color":"{{getColorFromRequest(request)}}"}'>
+          {{request.service_name}}</b>
+          <font
+            ng-style='{"color":"{{getColorFromRequest(request)}}"}'>
+            {{request.service_request}}</font>
+          </h3>
+          <h4>{{request.service_uri}}</h4>
+          <p>Received from {{request.client_mac}} on {{request.date}}</p>
+        </div>
+      </div>
+    </md-list-item>
+  </md-list>
+</md-content> 

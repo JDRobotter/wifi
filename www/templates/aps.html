@@ -42,11 +42,15 @@
         <div flex-gt-sm="50" flex>
           <small>Inactive since {{client.inactivity}}s</small>
           <div flex layout="row">
-            <div ng-repeat="service in client.services"
+            <div ng-repeat="(sname,service) in client.services"
                   ng-switch="service.icon.type">
               <i ng-switch-when="i" class="material-icons md-36">{{service.icon.src}}</i>
-              <md-icon ng-switch-when="img" md-svg-src="{{service.icon.src}}" class="service-icon"></md-icon>
+              <md-icon ng-switch-when="md-icon" md-svg-src="{{service.icon.src}}" class="service-icon"></md-icon>
+              <img ng-switch-when="img" ng-src="{{service.icon.src}}" class="service-icon"></md-icon>
               <i ng-switch-default class="material-icons md-36 md-avatar">android</i>
+              <md-tooltip>
+                {{sname}} {{service.version}} ({{service.type}})
+              </md-tooltip>
             </div>
           </div>
         </div>
