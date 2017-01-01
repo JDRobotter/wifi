@@ -30,10 +30,9 @@
     <md-list class="md-dense" flex>
       <md-list-item class="md-3-line client-list-item"
         ng-repeat="(mac,client) in infos.clients">
-<!--        layout="row" layout-xs="column">-->
         <div layout="row" layout-xs="column">
 
-        <div layout="row" flex>
+        <div layout="row" flex-xs="50">
           <i class="material-icons md-36 md-avatar">{{getIconFromDevice(client.device)}}</i>
           <div class="md-list-item-text" layout="column">
             <h3>{{client.name}}</h3>
@@ -42,7 +41,7 @@
           </div>
         </div>
 
-        <div flex>
+        <div flex-xs="50">
           <small>Inactive since {{client.inactivity}}s</small>
           <div flex layout="row">
             <div ng-repeat="(sname,service) in client.services"

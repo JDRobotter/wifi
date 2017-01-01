@@ -108,7 +108,6 @@ class ClientsDatabase(Thread):
           limit = _ef("LIMIT %s",_limit)
 
           query = "SELECT * FROM %s"%' '.join((table,where,orderby,limit))
-          print query
           c.execute(query)
           
           # push results into queue
