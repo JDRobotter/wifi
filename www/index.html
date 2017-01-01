@@ -21,18 +21,15 @@
 <body ng-app="starter-app" layout="column" ng-controller="AppController as app">
 
   <!-- Container #1 (see wireframe) -->
-  <md-toolbar layout="row" class="md-toolbar-tools">
+  <md-toolbar layout="row" class="md-toolbar-tools" flex>
     <h1>WIFI - title</h1>
   </md-toolbar>
 
-
   <md-content class="md-padding" flex>
     <md-nav-bar nav-bar-aria-label="navigation links">
-      <md-nav-item md-nav-href="#!/home">Home</md-nav-item>
       <md-nav-item md-nav-href="#!/aps" name="page_aps">APs</md-nav-item>
       <md-nav-item md-nav-href="#!/clients" name="page_clients">Clients</md-nav-item>
       <md-nav-item md-nav-href="#!/requests" name="page_requests">Requests</md-nav-item>
-      <md-nav-item md-nav-href="#!/infos">About</md-nav-item>
     </md-nav-bar>
 
     <!-- angular ui router template insertion -->
