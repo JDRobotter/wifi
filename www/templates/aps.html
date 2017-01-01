@@ -1,7 +1,7 @@
-<md-content class="md-padding">
+<md-content class="md-padding" flex>
 
 
-  <div ng-repeat="(ifname,infos) in status">
+  <div ng-repeat="(ifname,infos) in status" flex>
     <md-toolbar class="md-theme-light">
       <div class="md-toolbar-tools">
         <i class="material-icons md-36">wifi_tethering</i>
@@ -27,11 +27,14 @@
       </div>
     </md-toolbar>
 
-    <md-list class="md-dense" >
-      <md-list-item class="md-3-line" 
-        ng-repeat="(mac,client) in infos.clients"
-        layout="row">
-        <div flex-gt-sm="50" flex layout="row">
+    <md-content>
+    <md-list class="md-dense" flex>
+      <md-list-item class="md-3-line client-list-item"
+        ng-repeat="(mac,client) in infos.clients">
+<!--        layout="row" layout-xs="column">-->
+        <div layout="row" layout-xs="column">
+
+        <div layout="row" flex>
           <i class="material-icons md-36 md-avatar">{{getIconFromDevice(client.device)}}</i>
           <div class="md-list-item-text" layout="column">
             <h3>{{client.name}}</h3>
@@ -39,7 +42,8 @@
             <p>{{client.ip}} ({{mac}})</p>
           </div>
         </div>
-        <div flex-gt-sm="50" flex>
+
+        <div flex>
           <small>Inactive since {{client.inactivity}}s</small>
           <div flex layout="row">
             <div ng-repeat="(sname,service) in client.services"
@@ -54,8 +58,10 @@
             </div>
           </div>
         </div>
+        </div>
       </md-list-item>
     </md-list>
+    </md-content>
 
   </div>
 </md-content>

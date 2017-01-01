@@ -60,6 +60,10 @@
   border-bottom: 1px solid #ddd;
 }
 
+.client-list-item {
+  border-bottom: 1px solid #ddd;
+}
+
 .request-icon-avatar {
   padding: 5px;
   margin: 5px;

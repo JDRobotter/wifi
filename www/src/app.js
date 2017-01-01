@@ -25,16 +25,22 @@ function AppController($http, $scope, $mdDialog) {
   };
 
   $scope.getIconFromDevice = function(device) {
-    if(device.brand == "Apple") {
-      if(device.model.startsWith("iPad")) {
-        return "tablet_mac";
-      }
-      else {
-        return "tablet_android";
-      }
+    if(device == undefined) {
+      return 'star';
     }
     else {
-      return "phone_android";
+      if(device.brand == "Apple") {
+        if(device.model.startsWith("iPad")) {
+          return "tablet_mac";
+        }
+        else {
+          return "tablet_android";
+        }
+      }
+      else {
+        return "phone_android";
+      }
+      return "phone"
     }
   }
 
@@ -101,7 +107,7 @@ function AppController($http, $scope, $mdDialog) {
         console.log(response);
       });
 
-    $http.get('/query.json?q=all&n=100').then(response => {
+    $http.get('/query.json?q=all&n=10').then(response => {
         console.log("up");
         $scope.requests = response.data;
       },

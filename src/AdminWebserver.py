@@ -135,7 +135,6 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     elif len(args) == 1 and args[0] == 'query.json':
       if 'q' in dparams and 'n' in dparams:
         (q,),(n,) = dparams['q'],dparams['n']
-        print q,n
         self._query(q,n)
         return
       else:
@@ -145,6 +144,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
 
     elif len(args) == 1 and args[0] == 'status.json':
       return self._get_status()
+
     elif len(args) == 1 and args[0] == 'cookie.txt':
       if 'bssid' in dparams and 'host' in dparams:
         (bssid,),(host,) = dparams['bssid'], dparams['host']
