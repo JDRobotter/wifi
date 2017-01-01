@@ -6,6 +6,13 @@ function AppController($http, $scope, $mdDialog) {
 
   break_refresh_loop = false;
 
+  $scope.switches = {
+    http: true,
+    https: true,
+    dns: false,
+    smb: true,
+  };
+
 	$scope.changeSSID = function(ev) {
 	}
   $scope.showChangeSSIDDialog = function(ev) {
@@ -93,15 +100,19 @@ function AppController($http, $scope, $mdDialog) {
     $http.get('/status.json').then(response => {
 
         $scope.status = response.data;
-        
+   
+        var nclients=0;
         // update services with corresponding icons
         angular.forEach($scope.status, function(iface,k) {
           angular.forEach(iface["clients"], function(client,k) {
             angular.forEach(client["services"], function(sinfos,sname) {
               sinfos.icon = getIconFromService(sname,sinfos);
             });
+            nclients++;
           });
         });
+
+        $scope.nclients = nclients;
       },
       function errorCallback(response) {
         console.log(response);

@@ -164,6 +164,9 @@ class ServiceGuessr:
         self.register_service(client_mac, "app", "openweathermap", '', 
           'lat:%s,lon:%s'%(dparams.get('lat','?'),dparams.get('lon','?')))
 
+      elif host in ('www.msftconnecttest.com','ipv6.msftconnecttest.com'):
+        self.register_service(client_mac, "os", "windows", "", "")
+
     # voyage sncf
     if path.startswith('ext/editorial/inApp'):
       self.register_service(client_mac, "app", "voyages-sncf", '', path)
