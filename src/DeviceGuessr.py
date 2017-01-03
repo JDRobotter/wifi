@@ -28,9 +28,6 @@ class DeviceGuess:
     self.add_if_not_none(self.model,model)
     self.add_if_not_none(self.family,family)
 
-  def __repr__(self):
-    return str(self.brand),str(self.model),str(self.family)
-  
   def update(self, brand, model, family):
     self.add_if_not_none(self.brand,brand)
     self.add_if_not_none(self.model,model)
@@ -62,8 +59,6 @@ class DeviceGuessr:
     else:
       print "DEVICE UPDATED"
       self.devices[mac].update(brand,model,family)
-
-    print self.devices[mac]
 
   def get_device_from_mac(self, mac):
     dev = self.devices.get(mac,None)

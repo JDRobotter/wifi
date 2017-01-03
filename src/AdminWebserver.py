@@ -29,6 +29,10 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
   
   def _get_status(self):
     self.send_response(200)
+    self.send_header('Content-Type','application/json')
+    self.send_header('Cache-Control','no-cache, no-store, must-revalidate')
+    self.send_header('Pragma','no-cache')
+    self.send_header('Expires','0')
     self.send_header('Access-Control-Allow-Origin','*')
     self.end_headers()
     
@@ -90,7 +94,6 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     self.end_headers()
 
     db = self.server.app.db
-
     obj = db.fetch_last_requests('all',num)
 
     self.wfile.write(json.dumps(obj))

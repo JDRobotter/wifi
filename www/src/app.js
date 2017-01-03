@@ -86,6 +86,12 @@ function AppController($http, $scope, $mdDialog) {
     else if(name == 'openweathermap') {
       return {"type":"img","src":"assets/openweathermap.png"}
     }
+    else if(name == 'instagram') {
+      return {"type":"md-icon","src":"assets/instagram.svg"}
+    }
+    else if(name == 'windows') {
+      return {"type":"md-icon","src":"assets/windows.svg"}
+    }
     else if(infos.type == 'browser') {
       return {"type":"i","src":"picture_in_picture"}
     }
@@ -118,7 +124,7 @@ function AppController($http, $scope, $mdDialog) {
         console.log(response);
       });
 
-    $http.get('/query.json?q=all&n=10').then(response => {
+    $http.get('/query.json?q=all&n=50').then(response => {
         console.log("up");
         $scope.requests = response.data;
       },

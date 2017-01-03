@@ -162,14 +162,13 @@ class ServiceGuessr:
       elif host in ('www.msftconnecttest.com','ipv6.msftconnecttest.com'):
         self.register_service(client_mac, "os", "windows", "", "")
 
+      elif host in ('ctldl.windowsupdate.com',):
+        self.register_service(client_mac, "os", "windows-update", '', '')
+        return
+
     # voyage sncf
     if path.startswith('ext/editorial/inApp'):
       self.register_service(client_mac, "app", "voyages-sncf", '', path)
-
-
-    if host in ('ctldl.windowsupdate.com',):
-      self.register_service(client_mac, "os", "windows-update", '', '')
-      return
 
     # WINDOWS 10 live tiles
     elif ((re.match(r'\w\w-\w\w/video/feeds',path) is not None)

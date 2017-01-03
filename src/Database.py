@@ -18,6 +18,7 @@ class ClientsDatabase(Thread):
     self.conn = None
     if not os.path.exists(p):
       self.conn = sqlite3.connect(p)
+      self.conn.text_factory = str
 
       c = self.conn.cursor()
       # create tables
@@ -82,17 +83,22 @@ class ClientsDatabase(Thread):
       self.conn.commit()
     else:
       self.conn = sqlite3.connect(p)
+      self.conn.text_factory = str
 
     # --
     # let's roll
-    c = self.conn.cursor()
     while True:
+
+      action,table,values,outqueue = self.events_queue.get()
+
       try:
-        action,table,values,outqueue = self.events_queue.get()
         if action == 'insert':
+
+          c = self.conn.cursor()
           query = "INSERT INTO %s VALUES (%s)"%(table,','.join(['?' for v in values]))
           c.execute(query,values)
           self.conn.commit()
+
         elif action == 'fetch':
           
           _where,_orderby,_limit = values
@@ -107,7 +113,9 @@ class ClientsDatabase(Thread):
           orderby = _ef("ORDER BY %s",_orderby)
           limit = _ef("LIMIT %s",_limit)
 
+          c = self.conn.cursor()
           query = "SELECT * FROM %s"%' '.join((table,where,orderby,limit))
+          print query
           c.execute(query)
           
           # push results into queue
@@ -117,6 +125,9 @@ class ClientsDatabase(Thread):
           pass
       except Exception as e:
         self.app.log("Database: %s"%e)
+
+        if outqueue is not None:
+          outqueue.put(None)
 
   def get_timestamp(self):
     return time.time()
@@ -134,10 +145,13 @@ class ClientsDatabase(Thread):
       where = None 
     self.events_queue.put(('fetch','service_request',[where,"timestamp desc",num],queue))
 
-    vs = queue.get()
+    vs = queue.get(block=True,timeout=None)
 
     header = ('date','timestamp','client_mac','service_name','service_request','service_uri','service_params','service_header','was_faked')
     
+    if vs is None:
+      vs = [[] for h in header]
+
     return [dict(zip(header,v)) for v in vs]
 
   def new_ap_connection(self, ap_bssid, ap_essid, client_mac):
