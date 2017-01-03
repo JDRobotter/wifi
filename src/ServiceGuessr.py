@@ -1,13 +1,16 @@
 from user_agents import parse as ua_parse
 import re
 
+from src.DeviceGuessr import DeviceGuessr
+
 class ServiceGuessr:
   
   def __init__(self, karma):
     self.karma = karma
     self.services = {}
     self.dns = {}
-    self.devices = {}
+
+    self.device_guessr = DeviceGuessr(self.karma)
 
   def split_params(self, params):
     kvs = {}
@@ -33,9 +36,7 @@ class ServiceGuessr:
     return self.services[mac]
   
   def get_device(self, mac):
-    if not self.devices.has_key(mac):
-      return {}
-    return self.devices[mac]
+    return self.device_guessr.get_device_from_mac(mac)
 
   def register_service(self, client_mac, service_type, service_name, service_version, service_extra):
     self.karma.db.new_service(client_mac, service_type, service_name, service_version, service_extra)
@@ -125,13 +126,7 @@ class ServiceGuessr:
       infos = ua_parse(ua_string)
 
       if infos.device.brand is not None and infos.device.model is not None:
-        if not self.devices.has_key(client_mac):
-          self.devices[client_mac]= {
-            'brand': infos.device.brand,
-            'model': infos.device.model,
-            'family': infos.device.family
-            }
-        self.karma.db.new_device(client_mac,
+        self.device_guessr.new_hint(client_mac,
           infos.device.brand,
           infos.device.model,
           infos.device.family)
