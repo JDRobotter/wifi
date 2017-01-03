@@ -115,7 +115,6 @@ class ClientsDatabase(Thread):
 
           c = self.conn.cursor()
           query = "SELECT * FROM %s"%' '.join((table,where,orderby,limit))
-          print query
           c.execute(query)
           
           # push results into queue
