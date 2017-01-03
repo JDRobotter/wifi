@@ -41,7 +41,7 @@ function AppController($http, $scope, $mdDialog) {
           return "tablet_mac";
         }
         else {
-          return "tablet_android";
+          return "phone_iphone";
         }
       }
       else {
@@ -181,4 +181,9 @@ var app = angular.module( 'starter-app', ['ngMaterial','ui.router'])
           templateUrl:'templates/infos.html',
         })
     }])
+  .config(function($mdThemingProvider) {
+      $mdThemingProvider.theme('default')
+          .primaryPalette('blue-grey')
+          .accentPalette('orange');
+    })
   .controller('AppController', AppController);
