@@ -31,6 +31,25 @@ function AppController($http, $scope, $mdDialog) {
     });
   };
 
+  $scope.getIconFromIWInfos = function(iwinfos) {
+    var srssi = iwinfos.signal.split(' ')[0];
+    var rssi = parseInt(srssi);
+    console.log(rssi,iwinfos);
+    if(rssi < -100) {
+      return 'assets/signal_wifi_0_bar_24px.svg';
+    }
+    else if(rssi < -90) {
+      return 'assets/signal_wifi_statusbar_1_bar_26x24px.svg';
+    }
+    else if(rssi < -80) {
+      return 'assets/signal_wifi_statusbar_2_bar_26x24px.svg';
+    }
+    else if(rssi < -70) {
+      return 'assets/signal_wifi_statusbar_3_bar_26x24px.svg';
+    }
+    return 'assets/signal_wifi_statusbar_4_bar_26x24px.svg';
+  }
+
   $scope.getIconFromDevice = function(device) {
     if(device == undefined) {
       return 'star';
@@ -111,10 +130,17 @@ function AppController($http, $scope, $mdDialog) {
         // update services with corresponding icons
         angular.forEach($scope.status, function(iface,k) {
           angular.forEach(iface["clients"], function(client,k) {
-            angular.forEach(client["services"], function(sinfos,sname) {
-              sinfos.icon = getIconFromService(sname,sinfos);
-            });
-            nclients++;
+
+            // do not show old clients
+            if(client.inactivity > 5*60) {
+              delete iface["clients"][k];
+            }
+            else {
+              angular.forEach(client["services"], function(sinfos,sname) {
+                sinfos.icon = getIconFromService(sname,sinfos);
+              });
+              nclients++;
+            }
           });
         });
 

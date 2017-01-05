@@ -29,6 +29,9 @@ class AccessPoint(Thread):
     self.logfile = None
     self.clients = {}
     self.ifaces,self.hostapd_process = self.create_hostapd_access_point(essid, bssid, wpa2)
+    # will run in main loop
+    self.iw_monitoring_processes = []
+    self.iw_monitoring_timeout = None
     
     for iface in self.ifaces:
       subnet = self.karma.get_unique_subnet()
@@ -169,6 +172,8 @@ class AccessPoint(Thread):
     cname_watch_re = re.compile(r".* > (\w+:\w+:\w+:\w+:\w+:\w+).*CNAME*\s([a-z0-9-\.]+)\..*")
     aaaa_watch_re = re.compile(r"(\w+:\w+:\w+:\w+:\w+:\w+) >.*length \d+:\s([0-9\.]+)\.\d+.*A\?*\s([a-z0-9-\.]+)\..*")
     arp_watch_re = re.compile(r"(\w+:\w+:\w+:\w+:\w+:\w+) > .*\b((?:[0-9]{1,3}\.){3}[0-9]{1,3})\b tell \b((?:[0-9]{1,3}\.){3}[0-9]{1,3})\b")
+    iwmon_station_re = re.compile(r"Station (\w+:\w+:\w+:\w+:\w+:\w+) \(on \w+\)")
+    iwmon_kv_re = re.compile(r"\s*(.+):(.+?)$")
     path = os.path.join(self.karma.logpath,"hostapd_%s_%s"%(self.get_essid(),datetime.now().strftime("%Y%m%d-%H%M%S")))
     hostapd_log = open(path,'w')
     while True:
@@ -189,6 +194,11 @@ class AccessPoint(Thread):
         self.karma.log( "[x] No activity for essid %s, destroying AP"%self.get_essid())
         _killall()
         return
+      
+      # update RSSI
+      if self.iw_monitoring_is_done():
+        # start new monitoring processes
+        self.start_all_iw_monitoring()
 
       files = []
 
@@ -202,6 +212,8 @@ class AccessPoint(Thread):
         connwfd = self.connectionwatch_process.stdout.fileno()
         files.append(connwfd)
 
+      iwmonfds = [p.stdout.fileno() for p in self.iw_monitoring_processes]
+      files.extend(iwmonfds)
       
       nmapsd = []
       for n in self.nmaps:
@@ -321,6 +333,30 @@ class AccessPoint(Thread):
                   ctxt("%s => %s"%(dns['bssid'], dns['host']),GREY)))
             self.activity_ts = time.time()
 
+      for iwmonfd in iwmonfds:
+        if iwmonfd in rlist:
+          lr = LineReader(iwmonfd)
+          lines = lr.readlines()
+
+          kvs = {}
+          station = None
+          for line in lines:
+            m = iwmon_station_re.match(line)
+            if m is not None:
+              station, = m.groups()
+            else:
+              m = iwmon_kv_re.match(line)
+              if m is not None:
+                k,v = m.groups()
+                k = k.strip(" \t")
+                v = v.strip(" \t")
+                mac = station.lower()
+                if mac in self.clients:
+                  if 'iwinfos' in self.clients[mac]:
+                    self.clients[mac]['iwinfos'][k] = v
+                  else:
+                    self.clients[mac]['iwinfos'] = {k:v}
+
   def restart(self):
     # will remove AP from list on next check
     self.activity_ts = None  
@@ -387,7 +423,7 @@ class AccessPoint(Thread):
     self.setup_iptables([
       '-A','FORWARD',
       '-i',iface,
-      '-j','DROP'])
+        '-j','DROP'])
 
   def setup_allow(self, iface, proto, port):
     return self.setup_iptables([
@@ -407,6 +443,41 @@ class AccessPoint(Thread):
       '-j', 'REDIRECT',
       '--to-port', str(outport),
       ])
+  
+  def iw_monitoring_is_done(self):
+    tbrm = []
+    for p in self.iw_monitoring_processes:
+      if p.poll() is not None:
+        # process has ended
+        tbrm.append(p)
+    
+    # remove processes from list
+    for p in tbrm:
+      self.iw_monitoring_processes.remove(p)
+
+    n = len(self.iw_monitoring_processes)
+    if self.iw_monitoring_timeout is None:
+      if n == 0:
+        self.iw_monitoring_timeout = time.time()
+
+    elif time.time() - self.iw_monitoring_timeout > 1.0:
+      return True
+
+    return False
+
+  def start_all_iw_monitoring(self):
+    self.iw_monitoring_timeout = None
+    self.iw_monitoring_processes = [
+      self.start_iw_monitoring(iface) for iface in self.ifaces
+    ]
+
+  def start_iw_monitoring(self, iface):
+    cmd = ['iw','dev',iface,'station','dump']
+
+    p = subprocess.Popen(cmd,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE)
+    return p
 
   def start_dhcpd(self, iface, subnet):
     # create a temporary file
@@ -463,7 +534,6 @@ class AccessPoint(Thread):
     ifaces.append(interface)
     channel = random.randint(1,11)
     
-    print essid
     f = tempfile.NamedTemporaryFile(delete=False)
     f.write("interface=%s\n"%(interface))
     f.write("ssid=%s\n"%(essid[0]))

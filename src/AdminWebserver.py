@@ -74,19 +74,20 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
   def _get_file(self, path):
     _path = os.path.join(self.server.www_directory,path)
     if os.path.exists(_path):
-        try:
+      try:
         # open asked file
-            data = open(_path,'r').read()
+        data = open(_path,'r').read()
 
-            # send HTTP OK
-            self.send_response(200)
-            self.end_headers()
+        # send HTTP OK
+        self.send_response(200)
+        self.end_headers()
 
-            # push data
-            self.wfile.write(data)
-        except IOError as e:
-              self.send_500(str(e))
-  
+        # push data
+        self.wfile.write(data)
+
+      except IOError as e:
+        self.send_response(500)
+        self.end_headers()
   
   def _query(self, query, num):
 
@@ -96,7 +97,8 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     db = self.server.app.db
     obj = db.fetch_last_requests('all',num)
 
-    self.wfile.write(json.dumps(obj))
+    data = json.dumps(obj, ensure_ascii=False)
+    self.wfile.write(data)
 
   def create(self, ap):
     data = json.loads(ap,strict=False)

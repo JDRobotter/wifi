@@ -1,11 +1,12 @@
-<md-content class="md-padding">
 
-  <div ng-repeat="(ifname,infos) in status" flex>
+<div class="md-content md-padding">
+
+  <div ng-repeat="(ifname,infos) in status">
     <md-toolbar class="md-theme-light">
       <div class="md-toolbar-tools">
         <i class="material-icons md-36">wifi_tethering</i>
 				<span><small>{{ifname}} - </small>{{infos.ssid[0]}}</span>
-        <span flex></span>
+        <span></span>
 
         <!-- INTERFACE BAR MENU -->
   			<md-menu md-position-mode="target-right target" >
@@ -17,7 +18,7 @@
           <md-menu-content width="4" >
             <md-menu-item>
 							<md-button ng-click="showChangeSSIDDialog($event)">
-								<p flex>Change SSID</p>
+								<p>Change SSID</p>
 							</md-button>
 						</md-menu-item>
           </md-menu-content>
@@ -26,14 +27,14 @@
       </div>
     </md-toolbar>
 
-    <md-content>
-    <md-list class="md-dense" flex>
+    <md-list class="md-dense">
       <md-list-item class="md-3-line client-list-item"
         ng-repeat="(mac,client) in infos.clients">
+        <md-list-item-text flex>
         <div layout="row" layout-xs="column">
-
-        <div layout="row" flex-xs="50">
-          <i class="material-icons md-36 md-avatar">{{getIconFromDevice(client.device)}}</i>
+        <div layout="row" flex="50" flex-xs="100">
+          <md-icon class="md-avatar" md-svg-src="{{getIconFromIWInfos(client.iwinfos)}}"></md-icon>
+          <md-icon class="md-avatar md-36">{{getIconFromDevice(client.device)}}</md-icon>
           <div class="md-list-item-text" layout="column">
             <h3>{{client.name}}</h3>
             <h4>{{client.device.brand}} {{client.device.family}}</h4>
@@ -41,15 +42,19 @@
           </div>
         </div>
 
-        <div flex-xs="50">
+        <div flex="50" flex-xs="100">
           <small>Inactive since {{client.inactivity}}s</small>
-          <div flex layout="row">
+          <div layout="row">
             <div ng-repeat="(sname,service) in client.services"
                   ng-switch="service.icon.type">
+
               <i ng-switch-when="i" class="material-icons md-36">{{service.icon.src}}</i>
+
               <md-icon ng-switch-when="md-icon" md-svg-src="{{service.icon.src}}" class="service-icon"></md-icon>
-              <img ng-switch-when="img" ng-src="{{service.icon.src}}" class="service-icon"></md-icon>
-              <i ng-switch-default class="material-icons md-36 md-avatar">android</i>
+
+              <img ng-switch-when="img" ng-src="{{service.icon.src}}" class="service-icon"/>
+
+              <md-icon ng-switch-default="">android</md-icon>
               <md-tooltip>
                 {{sname}} {{service.version}} ({{service.type}})
               </md-tooltip>
@@ -57,9 +62,9 @@
           </div>
         </div>
         </div>
+        </md-list-item-text>
       </md-list-item>
     </md-list>
-    </md-content>
 
   </div>
-</md-content>
+</div>
