@@ -118,6 +118,10 @@ class ServiceGuessr:
       self.register_service(client_mac, "app", "dailymotion", '', '')
       return
 
+    if host in ('tts.waze.com',):
+      self.register_service(client_mac, "app", "waze", '', '')
+      return
+
   def feed_http_request(self, client_mac, protocol, path, params, headers):
     dparams = self.split_params(params)
     if 'user-agent' in headers:
@@ -164,6 +168,10 @@ class ServiceGuessr:
 
       elif host in ('ctldl.windowsupdate.com',):
         self.register_service(client_mac, "os", "windows-update", '', '')
+        return
+
+      elif host in ('tts.waze.com',):
+        self.register_service(client_mac, "app", "waze", '', '')
         return
 
     # voyage sncf

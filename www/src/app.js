@@ -111,6 +111,12 @@ function AppController($http, $scope, $mdDialog) {
     else if(name == 'windows') {
       return {"type":"md-icon","src":"assets/windows.svg"}
     }
+    else if(name == 'skype') {
+      return {"type":"md-icon","src":"assets/skype.svg"}
+    }
+    else if(name == 'waze') {
+      return {"type":"md-icon","src":"assets/waze.svg"}
+    }
     else if(infos.type == 'browser') {
       return {"type":"i","src":"picture_in_picture"}
     }
