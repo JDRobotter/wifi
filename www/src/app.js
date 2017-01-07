@@ -3,6 +3,7 @@ function AppController($http, $scope, $mdDialog) {
   var self = this;
 
   var refresh_timeout_ms = 2000;
+  var clients_timeout_s = 10*60;
 
   break_refresh_loop = false;
 
@@ -146,7 +147,7 @@ function AppController($http, $scope, $mdDialog) {
           angular.forEach(iface["clients"], function(client,k) {
 
             // do not show old clients
-            if(client.inactivity > 5*60) {
+            if(client.inactivity > clients_timeout_s) {
               delete iface["clients"][k];
             }
             else {
