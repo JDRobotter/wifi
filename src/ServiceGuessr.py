@@ -173,6 +173,10 @@ class ServiceGuessr:
       elif host in ('tts.waze.com',):
         self.register_service(client_mac, "app", "waze", '', '')
         return
+      
+      elif host in ('dnsproxy.ff.avast.com',):
+        self.register_service(client_mac, "app", "avast", '', '')
+        return
 
     # voyage sncf
     if path.startswith('ext/editorial/inApp'):
