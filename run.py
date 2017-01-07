@@ -124,6 +124,14 @@ class Karma2:
 
     self.guessr = ServiceGuessr(self)
 
+    self.version = self.get_version()
+
+  def get_version(self):
+    cmd = ['git','rev-parse','--short','HEAD']
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p.wait()
+    return p.stdout.read().strip('\n').strip()
+
   def log_login(self, client, user):
     client_ap = self.get_client_ap(client)
     bssid = None

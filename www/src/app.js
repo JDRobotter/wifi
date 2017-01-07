@@ -6,6 +6,14 @@ function AppController($http, $scope, $mdDialog) {
 
   break_refresh_loop = false;
 
+  $scope.server_version = ''
+  $http.get('/version.json').then(response => {
+    $scope.server_version = response.data.version;
+  },
+  function errorCallback(response) {
+    console.log(response);
+  });
+
   $scope.switches = {
     http: true,
     https: true,

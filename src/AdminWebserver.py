@@ -27,7 +27,7 @@ class AdminWebserver(Thread):
 
 class AdminHTTPRequestHandler(HTTPRequestHandler):    
   
-  def _get_status(self):
+  def _send_json(self, obj):
     self.send_response(200)
     self.send_header('Content-Type','application/json')
     self.send_header('Cache-Control','no-cache, no-store, must-revalidate')
@@ -35,7 +35,16 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     self.send_header('Expires','0')
     self.send_header('Access-Control-Allow-Origin','*')
     self.end_headers()
+
+    data = json.dumps(obj, ensure_ascii=False)
+    try:
+      self.wfile.write(data.encode('latin-1'))
+    except Exception as e:
+      print e
+      print data
     
+  def _get_status(self):
+
     status = {}
     
     for essid,ap in self.server.app.aps.iteritems():
@@ -58,15 +67,8 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
         status[ap.ifhostapd.iface]['clients'][mac] = client
         client['inactivity'] = int( time.time() - client['last_activity'])
         
-    
-    
-    data = json.dumps(status, ensure_ascii=False)
-    try:
-      self.wfile.write(data.encode('latin-1'))
-    except Exception as e:
-      print e
-      print data
-  
+    self._send_json(status)
+
   def _get_cookie(self, _bssid, _host):
     path = os.path.join(self.server.app.logpath, '%s_%s.cookie.txt'%(_bssid,host))
     return self._get_file(path)
@@ -88,17 +90,16 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       except IOError as e:
         self.send_response(500)
         self.end_headers()
-  
-  def _query(self, query, num):
 
-    self.send_response(200)
-    self.end_headers()
+  def _get_version(self):
+    self._send_json({'version':self.server.app.version})
+
+  def _query(self, query, num):
 
     db = self.server.app.db
     obj = db.fetch_last_requests('all',num)
 
-    data = json.dumps(obj, ensure_ascii=False)
-    self.wfile.write(data)
+    self._send_json(obj)
 
   def create(self, ap):
     data = json.loads(ap,strict=False)
@@ -150,6 +151,9 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     elif len(args) == 1 and args[0] == 'status.json':
       return self._get_status()
 
+    elif len(args) == 1 and args[0] == 'version.json':
+      return self._get_version()
+  
     elif len(args) == 1 and args[0] == 'cookie.txt':
       if 'bssid' in dparams and 'host' in dparams:
         (bssid,),(host,) = dparams['bssid'], dparams['host']
