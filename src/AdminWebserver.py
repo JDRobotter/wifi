@@ -1,6 +1,7 @@
 from threading import Lock,Thread
 import BaseHTTPServer
 from SocketServer import ThreadingMixIn, TCPServer, BaseRequestHandler
+import socket
 import os
 from Webserver import *
 from Utils import *
@@ -20,10 +21,15 @@ class AdminWebserver(Thread):
     server_class=HTTPServer
     handler_class=AdminHTTPRequestHandler
     server_address = ('', self.port)
-    httpd = server_class(server_address, self.app, handler_class, True, 'www/')
+    httpd = None
+    try:
+      httpd = server_class(server_address, self.app, handler_class, True, 'www/')
+    except socket.error as e:
+      self.app.log("%s Could not start ADMIN server on port %d"%(ctxt('[!]',RED),self.port))
+      return
     httpd.PRE = "HTTP"
     httpd.serve_forever()
-    self.app.log("[%s] HTTP server on port %d is shutting down"%(ctxt('x',RED),self.port))
+    self.app.log("[%s] ADMIN server on port %d is shutting down"%(ctxt('x',RED),self.port))
 
 class AdminHTTPRequestHandler(HTTPRequestHandler):    
   
