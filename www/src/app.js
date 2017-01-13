@@ -143,7 +143,7 @@ function AppController($http, $scope, $mdDialog) {
    
         var nclients=0;
         // update services with corresponding icons
-        angular.forEach($scope.status, function(iface,k) {
+        angular.forEach($scope.status.aps, function(iface,k) {
           angular.forEach(iface["clients"], function(client,k) {
 
             // do not show old clients

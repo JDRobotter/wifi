@@ -52,25 +52,26 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
   def _get_status(self):
 
     status = {}
-    
+    status['total_client_count'] = self.server.app.total_client_count
+    status['aps'] = {}
     for essid,ap in self.server.app.aps.iteritems():
-      status[ap.ifhostapd.iface] = {}
-      status[ap.ifhostapd.iface]['ssid'] = ap.essid
-      status[ap.ifhostapd.iface]['wpa2'] = ap.wpa2 != None
-      status[ap.ifhostapd.iface]['status'] = ap.status
-      status[ap.ifhostapd.iface]['count'] = len(ap.clients)
-      status[ap.ifhostapd.iface]['inactivity'] = 'unknown'
+      status['aps'][ap.ifhostapd.iface] = {}
+      status['aps'][ap.ifhostapd.iface]['ssid'] = ap.essid
+      status['aps'][ap.ifhostapd.iface]['wpa2'] = ap.wpa2 != None
+      status['aps'][ap.ifhostapd.iface]['status'] = ap.status
+      status['aps'][ap.ifhostapd.iface]['count'] = len(ap.clients)
+      status['aps'][ap.ifhostapd.iface]['inactivity'] = 'unknown'
       try:
-        status[ap.ifhostapd.iface]['inactivity'] = int(time.time() - ap.activity_ts)
+        status['aps'][ap.ifhostapd.iface]['inactivity'] = int(time.time() - ap.activity_ts)
       except:
         pass
-      status[ap.ifhostapd.iface]['timeout'] = ap.timeout
-      status[ap.ifhostapd.iface]['clients'] = {}
+      status['aps'][ap.ifhostapd.iface]['timeout'] = ap.timeout
+      status['aps'][ap.ifhostapd.iface]['clients'] = {}
       for mac,client in ap.clients.iteritems():
         client['services'] = self.server.app.guessr.get_services(mac)
         client['dns'] = self.server.app.guessr.get_dns(mac)
         client['device'] = self.server.app.guessr.get_device(mac)
-        status[ap.ifhostapd.iface]['clients'][mac] = client
+        status['aps'][ap.ifhostapd.iface]['clients'][mac] = client
         client['inactivity'] = int( time.time() - client['last_activity'])
         
     self._send_json(status)

@@ -84,6 +84,7 @@ class AccessPoint(Thread):
   
   def register_client(self, mac,ip, name = ""):
     if not self.clients.has_key(mac) and not mac in self.karma.ignore_bssid:
+      self.karma.total_client_count += 1
       self.unused = False
       self.clients[mac] = {'ip':ip, 'post':[], 'name': name, 'cookies':[],'last_activity': time.time()}
       self.karma.log( "new client %s (%s) %s"%(mac, ctxt(ip, GREEN), name))

@@ -72,7 +72,7 @@ class Karma2:
     self.logpath = args.logpath
     if not os.path.exists(self.logpath):
       os.mkdir(self.logpath)
-    
+    self.total_client_count = 0
     self.wpa = args.wpa
     self.ifmon = args.monitor
     self.ifgw = args.gateway
