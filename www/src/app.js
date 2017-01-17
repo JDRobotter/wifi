@@ -126,6 +126,24 @@ function AppController($http, $scope, $mdDialog) {
     else if(name == 'waze') {
       return {"type":"md-icon","src":"assets/waze.svg"}
     }
+    else if(name == 'airbnb') {
+      return {"type":"md-icon","src":"assets/airbnb.svg"}
+    }
+    else if(name == 'dailymotion') {
+      return {"type":"md-icon","src":"assets/dailymotion.svg"}
+    }
+    else if(name == 'dropbox') {
+      return {"type":"md-icon","src":"assets/dropbox.svg"}
+    }
+    else if(name == 'whatsapp') {
+      return {"type":"md-icon","src":"assets/whatsapp.svg"}
+    }
+    else if(name == 'spotify') {
+      return {"type":"md-icon","src":"assets/spotify.svg"}
+    }
+    else if(name == 'voyages-sncf') {
+      return {"type":"md-icon","src":"assets/sncf.svg"}
+    }
     else if(infos.type == 'browser') {
       return {"type":"i","src":"picture_in_picture"}
     }
