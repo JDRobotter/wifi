@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument("-m", "--monitor", help="Choose the monitor interface")
     parser.add_argument("-e", "--enable", help="Choose the monitor interface to enable")
     parser.add_argument("-a", "--hostapds", help="List of interfaces which will be used to create aps")
-    parser.add_argument("-n", "--name", action="append", help="start this given essid with optional bssid ie myWifi,00:27:22:35:07:70")
+    parser.add_argument("-n", "--name", action="append", help="start this given essid with optional bssid ie myWifi,00:27:22:35:07:70,key")
     parser.add_argument("-w", "--wpa", action='store_true', help="start probed ap with wpa security")
     parser.add_argument("-f", "--metasploit", help="path to the metasploit console")
     parser.add_argument("-t", "--tcpdump", action='store_true', help="run tcpdump on interface")
@@ -241,7 +241,7 @@ class Karma2:
     ap.daemon = True
     ap.start()
 
-  def create_aps(self, essids, bssids, timeout=30):
+  def create_aps(self, essids, bssids, wpas, timeout=30):
     while True:
       # fetch one interface
       iface = self.ifhostapds.get_one()
@@ -255,17 +255,21 @@ class Karma2:
 
       mbssids = bssids[:n]
       bssids = bssids[n:]
+      
+      mwpas = wpas[:n]
+      wpas = wpas[n:]
+      
       if messids == []:
         self.ifhostapds.free_one(iface)
         break
 
-      self.create_ap(iface, messids, mbssids, timeout)
+      self.create_ap(iface, messids, mbssids, mwpas, timeout)
 
-  def create_ap(self, iface, essid, bssid=None, timeout=30, wpa=None):
+  def create_ap(self, iface, essid, bssid=None, wpa=None, timeout=30):
     if iface is None:
       return
     if iface.available_ap >= len(essid):
-      ap = AccessPoint(self, iface, essid, bssid, timeout, wpa)
+      ap = AccessPoint(self, iface, essid, bssid, wpa, timeout)
       for e in essid:
         self.register_ap(e,ap)
       ap.daemon = True
@@ -280,7 +284,7 @@ class Karma2:
             wpa = None
             if args.wpa is not None:
               wpa = "glopglopglop"
-            self.create_ap(iface, [essid], [bssid], 30, wpa)
+            self.create_ap(iface, [essid], [bssid], [wpa], 30)
   
   def getWirelessInterfacesList(self):
     networkInterfaces=[]		
@@ -453,17 +457,28 @@ if __name__ == '__main__':
     if args.name is not None:
       essids = []
       bssids = []
+      wpas = []
       for name in args.name:
         # 24h timeout
-        essids.append(name.split(',')[0])
+        props = name.split(',')
+        essids.append(props[0])
         bssid = None
+        wpa = None
+        
         try:
-          bssid = name.split(',')[1]
+          bssid = props[1]
         except:
           pass
-        bssids.append(bssid)
         
-      km.create_aps(essids, bssids, 60*60*24*365)
+        try:
+          wpa = props[2]
+        except:
+          pass
+        
+        bssids.append(bssid)
+        wpas.append(wpa)
+        
+      km.create_aps(essids, bssids, wpas, 60*60*24*365)
     
     if not args.test:
       km.do_sniff()
@@ -480,7 +495,8 @@ if __name__ == '__main__':
     pass
   finally:
     if logfile is not None:
-      logfile.close()
+      with log_lock:
+        logfile.close()
     if args.enable is not None:
       log( "[+] Stopping monitor interface %s properly"%args.monitor)
       cmd = ['airmon-ng','stop',args.monitor]

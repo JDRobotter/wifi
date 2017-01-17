@@ -9,7 +9,7 @@ from SambaCrawler import *
 from Utils import *
 
 class AccessPoint(Thread):
-  def __init__(self, karma, ifhostapd, essid, bssid, timeout, wpa2=None, fishing=True):
+  def __init__(self, karma, ifhostapd, essid, bssid, wpa2=None, timeout = 30, fishing=True):
     Thread.__init__(self)
     self.status = 'creating'
     self.essid = essid
@@ -19,16 +19,18 @@ class AccessPoint(Thread):
         self.bssid.append(karma.getMacFromIface(ifhostapd.str()))
       if len(bssid) > 1:
         self.bssid = bssid
+    self.wpas = []
+    if wpa2 is not None:
+      self.wpas = wpa2
     self.karma = karma
     self.timeout = timeout
-    self.wpa2 = wpa2
     self.ifhostapd = ifhostapd
     self.ifaces = []
     self.unused = True
     self.activity_ts = time.time()
     self.logfile = None
     self.clients = {}
-    self.ifaces,self.hostapd_process = self.create_hostapd_access_point(essid, bssid, wpa2)
+    self.ifaces,self.hostapd_process = self.create_hostapd_access_point(essid, bssid, self.wpas)
     # will run in main loop
     self.iw_monitoring_processes = []
     self.iw_monitoring_timeout = None
@@ -527,6 +529,7 @@ class AccessPoint(Thread):
     return ','.join(self.bssid)
 
   def create_hostapd_access_point(self, essid, bssid, wpa2):
+
     bssid_text = ""
     bssid_text = " with bssid %s"%bssid
     self.karma.log( "[+] Creating (hostapd) AP %s %s"%(ctxt(self.get_essid(),GREEN),bssid_text))
@@ -540,16 +543,20 @@ class AccessPoint(Thread):
     f.write("ssid=%s\n"%(essid[0]))
     if bssid is not None:
       if bssid[0] is not None:
-        f.write("bssid=%s\n"%(bssid))
+        f.write("bssid=%s\n"%(bssid[0]))
     f.write("channel=%s\n"%(channel))
     f.write("hw_mode=g\n")
     f.write("ieee80211n=1\n")
     if wpa2 is not None:
-      f.write("wpa=2\n")
-      f.write("wpa_passphrase=%s\n"%wpa2)
-      f.write("wpa_key_mgmt=WPA-PSK\n")
-      f.write("wpa_pairwise=CCMP\n")
-      f.write("rsn_pairwise=CCMP\n")
+      try:
+        if wpa2[0] is not None:
+          f.write("wpa=2\n")
+          f.write("wpa_passphrase=%s\n"%wpa2[0])
+          f.write("wpa_key_mgmt=WPA-PSK\n")
+          f.write("wpa_pairwise=CCMP\n")
+          f.write("rsn_pairwise=CCMP\n")
+      except:
+        pass
     
     i = 0
     for e in essid[1:]:
@@ -560,7 +567,17 @@ class AccessPoint(Thread):
       if bssid is not None:
         if bssid[i] is not None:
           f.write("bssid=%s\n"%(bssid[i]))
-        i += 1
+      if wpa2 is not None:
+        try:
+          if wpa2[i] is not None:
+            f.write("wpa=2\n")
+            f.write("wpa_passphrase=%s\n"%wpa2[i])
+            f.write("wpa_key_mgmt=WPA-PSK\n")
+            f.write("wpa_pairwise=CCMP\n")
+            f.write("rsn_pairwise=CCMP\n")
+        except:
+          pass
+      i += 1
     
     f.close()
     

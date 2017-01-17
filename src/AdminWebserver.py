@@ -57,7 +57,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     for essid,ap in self.server.app.aps.iteritems():
       status['aps'][ap.ifhostapd.iface] = {}
       status['aps'][ap.ifhostapd.iface]['ssid'] = ap.essid
-      status['aps'][ap.ifhostapd.iface]['wpa2'] = ap.wpa2 != None
+      status['aps'][ap.ifhostapd.iface]['wpa2'] = len(ap.wpas) > 0
       status['aps'][ap.ifhostapd.iface]['status'] = ap.status
       status['aps'][ap.ifhostapd.iface]['count'] = len(ap.clients)
       status['aps'][ap.ifhostapd.iface]['inactivity'] = 'unknown'
