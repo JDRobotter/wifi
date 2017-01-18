@@ -97,7 +97,18 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       except IOError as e:
         self.send_response(500)
         self.end_headers()
-
+        
+  def _get_images(self):
+    self.send_response(200)
+    self.end_headers()
+    imgs = self.server.app.db.get_images()
+    data = '<html><ul>'
+    for img in imgs:
+      print img['service_uri']
+      data += '<li><img src="%s" alt=""></li>'%img['service_uri']
+    data += '</ul><html>'
+    self.wfile.write(data)
+  
   def _get_version(self):
     self._send_json({'version':self.server.app.version})
 
@@ -160,7 +171,8 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
 
     elif len(args) == 1 and args[0] == 'version.json':
       return self._get_version()
-  
+    elif len(args) == 1 and args[0] == 'images.html':
+      return self._get_images()
     elif len(args) == 1 and args[0] == 'cookie.txt':
       if 'bssid' in dparams and 'host' in dparams:
         (bssid,),(host,) = dparams['bssid'], dparams['host']

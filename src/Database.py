@@ -216,4 +216,17 @@ class ClientsDatabase(Thread):
       device_vendor,
       device_model,
       device_extra))
+    
+  def get_images(self):
+    queue = Queue()
+    where = "uri like '%.png%' or uri like '%.jpg%' or uri like '%.jpeg%' or uri like '%.tiff%'"
+    self.events_queue.put(('fetch','service_request',[where,"uri desc",None],queue))
+
+    vs = queue.get(block=True,timeout=None)
+
+    header = ('date','timestamp','client_mac','service_name','service_request','service_uri','service_params','service_header','was_faked')
+    
+    if vs is None:
+      vs = [[] for h in header]
+    return [dict(zip(header,v)) for v in vs]
 

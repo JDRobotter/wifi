@@ -54,7 +54,26 @@ class ServiceGuessr:
       self.dns[client_mac] = []
     if not host in self.dns[client_mac]:
       self.dns[client_mac].append(host)
+    
+    if host in ('api.leparisien.fr'):
+      self.register_service(client_mac, "app", "leparisien", '', '')
       
+    if host in ('api-cdn.lemonde.fr'):
+      self.register_service(client_mac, "app", "lemonde", '', '')
+    
+    if host in ('mobile-apps.guardianapis.com'):
+      self.register_service(client_mac, "app", "theguardian", '', '')
+     
+    if host in ('app.secure.particuliers.societegenerale.mobi'):
+      self.register_service(client_mac, "app", "societegenerale", '', '') 
+    
+    if host in ('ping3.teamviewer.com'):
+      self.register_service(client_mac, "app", "teamviewer", '', '')
+      
+    if host in ('api.deezer.com'):
+      self.register_service(client_mac, "app", "deezer", '', '')
+      return
+    
     if host in ('apresolve.spotify.com',):
       self.register_service(client_mac, "app", "spotify", '', '')
       return

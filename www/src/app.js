@@ -144,6 +144,21 @@ function AppController($http, $scope, $mdDialog) {
     else if(name == 'voyages-sncf') {
       return {"type":"md-icon","src":"assets/sncf.svg"}
     }
+    else if(name == 'deezer') {
+      return {"type":"md-icon","src":"assets/deezer.svg"}
+    }
+    else if(name == 'teamviewer') {
+      return {"type":"md-icon","src":"assets/teamviewer.svg"}
+    }
+    else if(name == 'theguardian') {
+      return {"type":"md-icon","src":"assets/The_Guardian.svg"}
+    }
+    else if(name == 'lemonde') {
+      return {"type":"md-icon","src":"assets/Le_Monde.svg"}
+    }
+    else if(name == 'leparisien') {
+      return {"type":"md-icon","src":"assets/le_parisien.svg"}
+    }
     else if(infos.type == 'browser') {
       return {"type":"i","src":"picture_in_picture"}
     }
