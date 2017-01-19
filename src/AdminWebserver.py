@@ -44,7 +44,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
 
     data = json.dumps(obj, ensure_ascii=False)
     try:
-      self.wfile.write(data.encode('latin-1'))
+      self.wfile.write(data.encode('utf-8'))
     except Exception as e:
       print e
       print data
