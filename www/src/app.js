@@ -8,7 +8,7 @@ function AppController($http, $scope, $mdDialog) {
   break_refresh_loop = false;
 
   $scope.server_version = ''
-  $http.get('/version.json').then(response => {
+  $http.get('/api/version').then(response => {
     $scope.server_version = response.data.version;
   },
   function errorCallback(response) {
@@ -31,7 +31,6 @@ function AppController($http, $scope, $mdDialog) {
       parent: angular.element(document.body),
       targetEvent: ev,
       clickOutsideToClose:true,
-      fullscreen: $scope.customFullscreen // Only for -xs, -sm breakpoints.
     })
     .then(function(answer) {
 			// XXX TBD
@@ -170,7 +169,7 @@ function AppController($http, $scope, $mdDialog) {
   $scope.refresh = function() {
 
     // fetch status
-    $http.get('/status.json').then(response => {
+    $http.get('/api/status').then(response => {
 
         $scope.status = response.data;
    
@@ -198,7 +197,7 @@ function AppController($http, $scope, $mdDialog) {
         console.log(response);
       });
 
-    $http.get('/query.json?q=all&n=50').then(response => {
+    $http.get('/api/query?q=all&n=50').then(response => {
         console.log("up");
         $scope.requests = response.data;
       },

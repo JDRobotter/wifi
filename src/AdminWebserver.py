@@ -44,10 +44,9 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
 
     data = json.dumps(obj, ensure_ascii=False)
     try:
-      self.wfile.write(data.encode('utf-8'))
+      self.wfile.write(data)
     except Exception as e:
-      print e
-      print data
+      raise
     
   def _get_status(self):
 
@@ -156,21 +155,28 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     if len(args) == 1 and args[0] == '':
       path = 'index.html'
 
-    elif len(args) == 1 and args[0] == 'query.json':
-      if 'q' in dparams and 'n' in dparams:
-        (q,),(n,) = dparams['q'],dparams['n']
-        self._query(q,n)
-        return
+    elif args[0] == 'api':
+      if len(args) == 2 and args[1] == 'query':
+        if 'q' in dparams and 'n' in dparams:
+          (q,),(n,) = dparams['q'],dparams['n']
+          self._query(q,n)
+          return
+        else:
+          self.send_response(400)
+          self.end_headers()
+          return
+
+      elif len(args) == 2 and args[1] == 'status':
+        return self._get_status()
+
+      elif len(args) == 2 and args[1] == 'version':
+        return self._get_version()
+
       else:
         self.send_response(400)
         self.end_headers()
         return
 
-    elif len(args) == 1 and args[0] == 'status.json':
-      return self._get_status()
-
-    elif len(args) == 1 and args[0] == 'version.json':
-      return self._get_version()
     elif len(args) == 1 and args[0] == 'images.html':
       return self._get_images()
     elif len(args) == 1 and args[0] == 'cookie.txt':
