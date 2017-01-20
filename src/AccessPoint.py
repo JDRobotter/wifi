@@ -4,24 +4,15 @@ from select import select
 import subprocess
 import os
 from datetime import datetime
-
+import random
 from SambaCrawler import *
 from Utils import *
 
 class AccessPoint(Thread):
-  def __init__(self, karma, ifhostapd, essid, bssid, wpa2=None, timeout = 30, fishing=True):
+  def __init__(self, karma, ifhostapd, aps, timeout = 30, fishing=True):
     Thread.__init__(self)
     self.status = 'creating'
-    self.essid = essid
-    self.bssid = []
-    if bssid is not None:
-      for e in essid:
-        self.bssid.append(karma.getMacFromIface(ifhostapd.str()))
-      if len(bssid) > 1:
-        self.bssid = bssid
-    self.wpas = []
-    if wpa2 is not None:
-      self.wpas = wpa2
+    self.aps  = aps
     self.karma = karma
     self.timeout = timeout
     self.ifhostapd = ifhostapd
@@ -30,7 +21,12 @@ class AccessPoint(Thread):
     self.activity_ts = time.time()
     self.logfile = None
     self.clients = {}
-    self.ifaces,self.hostapd_process = self.create_hostapd_access_point(essid, bssid, self.wpas)
+    
+    for ap in self.aps:
+      if ap['bssid'] is None:
+        ap['bssid'] = self.get_random_bssid()
+    
+    self.ifaces,self.hostapd_process = self.create_hostapd_access_point()
     # will run in main loop
     self.iw_monitoring_processes = []
     self.iw_monitoring_timeout = None
@@ -66,6 +62,17 @@ class AccessPoint(Thread):
 
       else:
         self.connectionwatch_process = None
+
+  def get_random_bssid(self):
+    realmac = self.karma.getMacFromIface(self.ifhostapd.str()).split(':')
+    
+    
+    return "%s:%s:%s:%02x:%02x:%02x" % (
+        realmac[0], realmac[1], realmac[2],
+        random.randint(0, 255),
+        random.randint(0, 255),
+        random.randint(0, 255),
+        )
 
   def start_tcp_dump(self):
     self.logfile = os.path.join(self.karma.logpath,"wifi-%s-%s.cap"%(self.get_essid(),datetime.now().strftime("%Y%m%d-%H%M%S")))
@@ -523,60 +530,57 @@ class AccessPoint(Thread):
     return p
 
   def get_essid(self):
-    return '-'.join(self.essid)
+    essids = []
+    for ap in self.aps:
+      essids.append(ap['essid'])
+    return '-'.join(essids)
 
   def get_bssid(self):
-    return ','.join(self.bssid)
+    bssids = []
+    for ap in self.aps:
+      bssids.append(ap['bssid'])
+    return '-'.join(bssids)
 
-  def create_hostapd_access_point(self, essid, bssid, wpa2):
-
-    bssid_text = ""
-    bssid_text = " with bssid %s"%bssid
-    self.karma.log( "[+] Creating (hostapd) AP %s %s"%(ctxt(self.get_essid(),GREEN),bssid_text))
+  def create_hostapd_access_point(self):
+    text = ' creating '
+    for ap in self.aps:
+      text += ' %s:%s:%s'%(ctxt(ap['essid'],GREEN), ap['bssid'], ap['wpa'])
+    self.karma.log( "[+] Creating (hostapd) AP %s"% text)
     ifaces = []
     interface = self.ifhostapd.str()
     ifaces.append(interface)
     channel = random.randint(1,11)
     
+    #there is at least one ap
+    ap = self.aps[0]
+    
     f = tempfile.NamedTemporaryFile(delete=False)
     f.write("interface=%s\n"%(interface))
-    f.write("ssid=%s\n"%(essid[0]))
-    if bssid is not None:
-      if bssid[0] is not None:
-        f.write("bssid=%s\n"%(bssid[0]))
+    f.write("ssid=%s\n"%(ap['essid']))
+    f.write("bssid=%s\n"%(ap['bssid']))
     f.write("channel=%s\n"%(channel))
     f.write("hw_mode=g\n")
     f.write("ieee80211n=1\n")
-    if wpa2 is not None:
-      try:
-        if wpa2[0] is not None:
-          f.write("wpa=2\n")
-          f.write("wpa_passphrase=%s\n"%wpa2[0])
-          f.write("wpa_key_mgmt=WPA-PSK\n")
-          f.write("wpa_pairwise=CCMP\n")
-          f.write("rsn_pairwise=CCMP\n")
-      except:
-        pass
+    if ap['wpa'] is not None:
+      f.write("wpa=2\n")
+      f.write("wpa_passphrase=%s\n"%ap['wpa'])
+      f.write("wpa_key_mgmt=WPA-PSK\n")
+      f.write("wpa_pairwise=CCMP\n")
+      f.write("rsn_pairwise=CCMP\n")
     
     i = 0
-    for e in essid[1:]:
-      interface = "%s_%s\n"%(interface[-3:], i)
+    for ap in self.aps[1:]:
+      interface = "%s_%s"%(interface[-3:], i)
       ifaces.append(interface)
-      f.write("bss=%s"%interface)
-      f.write("ssid=%s\n"%e)
-      if bssid is not None:
-        if bssid[i] is not None:
-          f.write("bssid=%s\n"%(bssid[i]))
-      if wpa2 is not None:
-        try:
-          if wpa2[i] is not None:
-            f.write("wpa=2\n")
-            f.write("wpa_passphrase=%s\n"%wpa2[i])
-            f.write("wpa_key_mgmt=WPA-PSK\n")
-            f.write("wpa_pairwise=CCMP\n")
-            f.write("rsn_pairwise=CCMP\n")
-        except:
-          pass
+      f.write("bss=%s\n"%interface)
+      f.write("bssid=%s\n"%(ap['bssid']))
+      f.write("ssid=%s\n"%ap['essid'])
+      if ap['wpa'] is not None:
+        f.write("wpa=2\n")
+        f.write("wpa_passphrase=%s\n"%ap['wpa'])
+        f.write("wpa_key_mgmt=WPA-PSK\n")
+        f.write("wpa_pairwise=CCMP\n")
+        f.write("rsn_pairwise=CCMP\n")
       i += 1
     
     f.close()
@@ -589,10 +593,13 @@ class AccessPoint(Thread):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return ifaces,p
 
-  def create_airbase_access_point(self, essid):
-    self.karma.log( "[+] Creating (airbase) AP %s"%essid)
+  def create_airbase_access_point(self):
+    ap = self.aps[0]
+    if len(self.aps) > 1:
+      self.karma.log( "[!] Warning, only the first ap will be created")
+    self.karma.log( "[+] Creating (airbase) AP %s"%ap['essid'])
     cmd = ["airbase-ng",
-      "--essid", "%s"%essid,
+      "--essid", "%s"%ap['essid'],
       "-c","4",
       "-I","2000",
       self.karma.ifmon]

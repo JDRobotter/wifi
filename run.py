@@ -242,7 +242,7 @@ class Karma2:
     ap.daemon = True
     ap.start()
 
-  def create_aps(self, essids, bssids, wpas, timeout=30):
+  def create_aps(self, aps, timeout=30):
     while True:
       # fetch one interface
       iface = self.ifhostapds.get_one()
@@ -251,26 +251,20 @@ class Karma2:
 
       # get aps for this ap
       n = iface.available_ap
-      messids = essids[:n]
-      essids = essids[n:]
-
-      mbssids = bssids[:n]
-      bssids = bssids[n:]
+      maps = aps[:n]
+      aps = aps[n:]
       
-      mwpas = wpas[:n]
-      wpas = wpas[n:]
-      
-      if messids == []:
+      if maps == []:
         self.ifhostapds.free_one(iface)
         break
 
-      self.create_ap(iface, messids, mbssids, mwpas, timeout)
+      self.create_ap(iface, maps, timeout)
 
-  def create_ap(self, iface, essid, bssid=None, wpa=None, timeout=30):
+  def create_ap(self, iface, aps, timeout=30):
     if iface is None:
       return
-    if iface.available_ap >= len(essid):
-      ap = AccessPoint(self, iface, essid, bssid, wpa, timeout)
+    if iface.available_ap >= len(aps):
+      ap = AccessPoint(self, iface, aps, timeout)
       for e in essid:
         self.register_ap(e,ap)
       ap.daemon = True
@@ -285,7 +279,12 @@ class Karma2:
             wpa = None
             if args.wpa is not None:
               wpa = "glopglopglop"
-            self.create_ap(iface, [essid], [bssid], [wpa], 30)
+            ap = [{
+              'bssid':None,
+              'essid': essid,
+              'wpa': wpa
+              }]
+            self.create_ap(iface, ap, 30)
   
   def getWirelessInterfacesList(self):
     networkInterfaces=[]		
@@ -456,13 +455,11 @@ if __name__ == '__main__':
       km.start_ftpserver(km, km.redirections[21])
 
     if args.name is not None:
-      essids = []
-      bssids = []
-      wpas = []
+      aps = []
       for name in args.name:
         # 24h timeout
         props = name.split(',')
-        essids.append(props[0])
+        essid = props[0]
         bssid = None
         wpa = None
         
@@ -476,10 +473,9 @@ if __name__ == '__main__':
         except:
           pass
         
-        bssids.append(bssid)
-        wpas.append(wpa)
+        aps.append({'bssid': bssid, 'essid': essid, 'wpa': wpa})
         
-      km.create_aps(essids, bssids, wpas, 60*60*24*365)
+      km.create_aps(aps, 60*60*24*365)
     
     if not args.test:
       km.do_sniff()
