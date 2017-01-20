@@ -53,25 +53,27 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     status = {}
     status['total_client_count'] = self.server.app.total_client_count
     status['aps'] = {}
-    for essid,ap in self.server.app.aps.iteritems():
-      status['aps'][ap.ifhostapd.iface] = {}
-      status['aps'][ap.ifhostapd.iface]['ssid'] = ap.essid
-      status['aps'][ap.ifhostapd.iface]['wpa2'] = len(ap.wpas) > 0
-      status['aps'][ap.ifhostapd.iface]['status'] = ap.status
-      status['aps'][ap.ifhostapd.iface]['count'] = len(ap.clients)
-      status['aps'][ap.ifhostapd.iface]['inactivity'] = 'unknown'
-      try:
-        status['aps'][ap.ifhostapd.iface]['inactivity'] = int(time.time() - ap.activity_ts)
-      except:
-        pass
-      status['aps'][ap.ifhostapd.iface]['timeout'] = ap.timeout
-      status['aps'][ap.ifhostapd.iface]['clients'] = {}
-      for mac,client in ap.clients.iteritems():
-        client['services'] = self.server.app.guessr.get_services(mac)
-        client['dns'] = self.server.app.guessr.get_dns(mac)
-        client['device'] = self.server.app.guessr.get_device(mac)
-        status['aps'][ap.ifhostapd.iface]['clients'][mac] = client
-        client['inactivity'] = int( time.time() - client['last_activity'])
+    for iface,ap in self.server.app.aps.iteritems():
+      for viface in ap.virtuals:
+        key = viface.iface
+        status['aps'][key] = {}
+        status['aps'][key]['ssid'] = viface.essid
+        status['aps'][key]['wpa2'] = False
+        status['aps'][key]['status'] = ap.status
+        status['aps'][key]['count'] = len(viface.clients)
+        status['aps'][key]['inactivity'] = 'unknown'
+        try:
+          status['aps'][key]['inactivity'] = int(time.time() - viface.activity_ts)
+        except:
+          pass
+        status['aps'][key]['timeout'] = ap.timeout
+        status['aps'][key]['clients'] = {}
+        for mac,client in viface.clients.iteritems():
+          client['services'] = self.server.app.guessr.get_services(mac)
+          client['dns'] = self.server.app.guessr.get_dns(mac)
+          client['device'] = self.server.app.guessr.get_device(mac)
+          status['aps'][key]['clients'][mac] = client
+          client['inactivity'] = int( time.time() - client['last_activity'])
         
     self._send_json(status)
 

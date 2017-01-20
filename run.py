@@ -153,16 +153,18 @@ class Karma2:
     log(message)
   
   def get_client_ap(self,ip):
-    for essid,ap in self.aps.iteritems():
-      for m,c in ap.clients.iteritems():
-        if c['ip'] == ip:
-          return ap
+    for iface,ap in self.aps.iteritems():
+      for v in ap.virtuals:
+        for m,c in v.clients.iteritems():
+          if c['ip'] == ip:
+            return ap
 
   def get_client_bssid(self, ip):
-    for essid,ap in self.aps.iteritems():
-      for m,c in ap.clients.iteritems():
-        if c['ip'] == ip:
-          return m
+    for iface,ap in self.aps.iteritems():
+      for v in ap.virtuals:
+        for m,c in v.clients.iteritems():
+          if c['ip'] == ip:
+            return m
   
   def getMacFromIface(self, _iface):
       path = "/sys/class/net/%s/address"%_iface
@@ -226,11 +228,11 @@ class Karma2:
   def free_subnet(self, subnet):
     self.subnets.add(subnet.base)
 
-  def register_ap(self, essid, ap):
-    self.aps[essid] = ap
+  def register_ap(self, iface, ap):
+    self.aps[iface] = ap
 
-  def release_ap(self, essid):
-    self.aps.pop(essid)
+  def release_ap(self, iface):
+    self.aps.pop(iface)
 
   def create_mgmt_ap(self, iface):
     essid = "mgmt"
@@ -266,7 +268,7 @@ class Karma2:
     if iface.available_ap >= len(aps):
       ap = AccessPoint(self, iface, aps, timeout)
       for e in essid:
-        self.register_ap(e,ap)
+        self.register_ap(iface,ap)
       ap.daemon = True
       ap.start()
     else:
