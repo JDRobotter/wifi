@@ -5,19 +5,19 @@ from Queue import Queue
 class ClientsDatabase(Thread):
   daemon = True
 
-  def __init__(self, app):
+  def __init__(self, app, path = 'client.db'):
     Thread.__init__(self)
     self.events_queue = Queue()
     self.app = app
+    self.path = path
 
   def run(self):
-    p = 'clients.db'
 
     # --
     # create database
     self.conn = None
-    if not os.path.exists(p):
-      self.conn = sqlite3.connect(p)
+    if not os.path.exists(self.path):
+      self.conn = sqlite3.connect(self.path)
       self.conn.text_factory = str
 
       c = self.conn.cursor()

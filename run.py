@@ -42,6 +42,7 @@ def parse_args():
     parser.add_argument("-f", "--metasploit", help="path to the metasploit console")
     parser.add_argument("-t", "--tcpdump", action='store_true', help="run tcpdump on interface")
     parser.add_argument("-o", "--offline", action='store_true', help="offline mode")
+    parser.add_argument("-v", "--database", help="database path")
     parser.add_argument("-r", "--redirections", help="List of redirections (default is 80:8080,443:8080")
     parser.add_argument("-s", "--scan", action='store_true', help="run nmap on each new device")
     parser.add_argument("-x", "--management", help="deploy a management AP on this interface")
@@ -119,7 +120,7 @@ class Karma2:
     if args.metasploit is not None:
       self.start_metasploit(args.metasploit)
   
-    self.db = ClientsDatabase(self)
+    self.db = ClientsDatabase(self, args.database)
     self.db.start()
 
     self.guessr = ServiceGuessr(self)
