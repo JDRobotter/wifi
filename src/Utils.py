@@ -57,7 +57,7 @@ class WLANInterface:
   def __init__(self, iface):
     self.iface = iface
     # iw list | grep "valid interface combinations"
-    self.available_ap = 2
+    self.available_ap = 1
     self.available = True
 
   def str(self):

@@ -17,6 +17,7 @@ class VirtualInterface(Thread):
     self.karma = ap.karma
     self.iface = iface
     self.essid = essid
+    self.unused = True
     self.activity_ts = time.time()
     subnet = self.karma.get_unique_subnet()
     self.subnet = None
@@ -64,9 +65,8 @@ class VirtualInterface(Thread):
     self.logfile = os.path.join(self.karma.logpath,"wifi-%s-%s.cap"%(self.essid,datetime.now().strftime("%Y%m%d-%H%M%S")))
     self.karma.log( "[+] Starting tcpdump %s"%self.logfile )
     cmd = ['tcpdump']
-    for iface in self.ifaces:
-      cmd.append('-i')
-      cmd.append(iface)
+    cmd.append('-i')
+    cmd.append(self.iface)
     cmd.append('-w')
     cmd.append(self.logfile)
     p = subprocess.Popen(cmd,
@@ -579,26 +579,30 @@ class AccessPoint(Thread):
       text += ' %s:%s:%s'%(ctxt(ap['essid'],GREEN), ap['bssid'], ap['wpa'])
     self.karma.log( "[+] Creating (hostapd) AP %s"% text)
     ifaces = {}
-    interface = self.ifhostapd.str()
+    interface = self.ifhostapd.str()    
+    
+    #there is at least one ap
+    ap = self.aps[0]
     
     channel = random.randint(1,11)
     
     # for multiple essid in one iface, one channel may be specified by "iw list"
     if len(self.aps) > 1:
       channel = 1
-    
-    #there is at least one ap
-    ap = self.aps[0]
+      if ap['bssid'][-1] != '0':
+        ap['bssid'] = ap['bssid'][:-1] + '0'
     
     ifaces[interface] = ap['essid']
     
     f = tempfile.NamedTemporaryFile(delete=False)
+    f.write('driver=nl80211\n')
+    
     f.write("interface=%s\n"%(interface))
     f.write("ssid=%s\n"%(ap['essid']))
     f.write("bssid=%s\n"%(ap['bssid']))
     f.write("channel=%s\n"%(channel))
-    f.write("hw_mode=g\n")
-    f.write("ieee80211n=1\n")
+    #f.write("hw_mode=g\n")
+    #f.write("ieee80211n=1\n")
     if ap['wpa'] is not None:
       f.write("wpa=2\n")
       f.write("wpa_passphrase=%s\n"%ap['wpa'])
@@ -611,7 +615,9 @@ class AccessPoint(Thread):
       interface = "%s_%s"%(interface[-3:], i)
       ifaces[interface] = ap['essid']
       f.write("bss=%s\n"%interface)
-      f.write("bssid=%s\n"%(ap['bssid']))
+      
+      #may fail on some devices
+      #f.write("bssid=%s\n"%(ap['bssid']))
       f.write("ssid=%s\n"%ap['essid'])
       if ap['wpa'] is not None:
         f.write("wpa=2\n")

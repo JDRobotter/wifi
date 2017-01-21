@@ -53,6 +53,7 @@ def parse_args():
     parser.add_argument("-z", "--hostapd", help="hostapd binary path")
     parser.add_argument("-q", "--test", action='store_true', help="run test mode")
     parser.add_argument("-p", "--port", help="admin webserver port")
+    parser.add_argument("-y", "--virtual", help="virtual interfaces count (default is one by physical device)")
     parser.add_argument('-i', '--ignore', help='ignore bssid ie. -i mac1 mac2 macN', action='append', nargs='*')
     return parser.parse_args()
 
@@ -252,7 +253,12 @@ class Karma2:
         break
 
       # get aps for this ap
-      n = iface.available_ap
+      n = iface.available_ap # not implemented, always 1
+      if self.args.virtual is None:
+        n = 1
+      else:
+        #n = min(n, self.args.virtual)
+        n = self.args.virtual
       maps = aps[:n]
       aps = aps[n:]
       
@@ -265,14 +271,14 @@ class Karma2:
   def create_ap(self, iface, aps, timeout=30):
     if iface is None:
       return
-    if iface.available_ap >= len(aps):
-      ap = AccessPoint(self, iface, aps, timeout)
-      for e in essid:
-        self.register_ap(iface,ap)
-      ap.daemon = True
-      ap.start()
-    else:
-      log("Too many ap %s to create for this interface %s"%(len(essid), iface.str()))
+    #if iface.available_ap >= len(aps):
+    ap = AccessPoint(self, iface, aps, timeout)
+    for e in essid:
+      self.register_ap(iface,ap)
+    ap.daemon = True
+    ap.start()
+    #else:
+      #log("Too many ap %s to create for this interface %s"%(len(essid), iface.str()))
 
   def process_probe(self, essid, bssid = None):
     if (not essid in self.aps.keys()
@@ -441,6 +447,9 @@ if __name__ == '__main__':
     if args.forbidden is not None:
      forbidden = args.forbidden.split(',')
     args.forbidden = forbidden
+    
+    if args.virtual is not None:
+      args.virtual = int(args.virtual)
     
     km = Karma2(args)
     
