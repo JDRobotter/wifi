@@ -82,7 +82,7 @@ class ClientsDatabase(Thread):
 
       self.conn.commit()
     else:
-      self.conn = sqlite3.connect(p)
+      self.conn = sqlite3.connect(self.path)
       self.conn.text_factory = str
 
     # --
