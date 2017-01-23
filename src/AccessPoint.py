@@ -105,12 +105,6 @@ class VirtualInterface(Thread):
       self.dhcpd_process.wait()
     except:
       self.karma.log( "%s could not kill dhcpd"%ctxt("[!]",RED))
-    try:
-      self.hostapd_process.kill()
-      self.hostapd_process.wait()
-      time.sleep(0.5)
-    except:
-      self.karma.log( "%s could not kill hostapd"%ctxt("[!]",RED))
     if self.tcpdump_process is not None:
       try:
         self.tcpdump_process.kill()
@@ -133,10 +127,6 @@ class VirtualInterface(Thread):
     
     #clear route cache
     cmd = ["ip", "route", "del", self.subnet.range_null()]
-    p = subprocess.Popen(cmd)
-    p.wait()
-    
-    cmd = ["iwconfig", self.iface, "mode", 'managed']
     p = subprocess.Popen(cmd)
     p.wait()
     
@@ -167,8 +157,7 @@ class VirtualInterface(Thread):
       
       # check alive
       if self.activity_ts is None:
-        self.karma.log( "%s Unable to create an AP for %s"%(ctxt("[!]",RED),self.essid))
-        self.killall()
+        self.karma.log( "%s Stopping %s"%(ctxt("[-]",GREEN),self.essid))
         return
       
       # update RSSI
@@ -547,7 +536,12 @@ class AccessPoint(Thread):
                 self.restart()
       
     print "no more hostapd"
-    self.karma.ifhostapds.free_one(self.ifhostapd)
+    try:
+      self.hostapd_process.kill()
+      self.hostapd_process.wait()
+      time.sleep(0.5)
+    except:
+      self.karma.log( "%s could not kill hostapd"%ctxt("[!]",RED))
     hostapd_log.close()
     if not (self.karma.debug or keep_hostapd_log):
       os.remove(hostapd_log.name)
@@ -555,6 +549,11 @@ class AccessPoint(Thread):
       v.stop()
     for v in self.virtuals:
       v.join()
+      
+    cmd = ["iwconfig", self.ifhostapd.str(), "mode", 'managed']
+    p = subprocess.Popen(cmd)
+    p.wait()
+    self.karma.ifhostapds.free_one(self.ifhostapd)
 
   def restart(self):
     # will remove AP from list on next check

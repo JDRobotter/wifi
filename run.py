@@ -265,7 +265,6 @@ class Karma2:
       if maps == []:
         self.ifhostapds.free_one(iface)
         break
-
       self.create_ap(iface, maps, timeout)
 
   def create_ap(self, iface, aps, timeout=30):
@@ -494,8 +493,21 @@ if __name__ == '__main__':
     while True:
       if args.test:
         char_set = string.ascii_uppercase + string.digits
-        essid = ''.join(random.sample(char_set*6, 6))
-        km.create_ap(self.ifhostapds.get_one(), "test_%s"%essid, None)
+        aps = []
+        count = 1
+        if args.virtual is not None:
+          count = random.randint(1,args.virtual)
+        for i in range(0,count):
+          essid = 'test_%s'%''.join(random.sample(char_set*6, 6))
+          bssid = None
+          wpa = None
+          aps.append({
+            'essid':essid,
+            'bssid':bssid,
+            'wpa':wpa
+            })
+        
+        km.create_aps(aps, 10)
         
       time.sleep(1)
 
