@@ -1,3 +1,4 @@
+import zlib
 from threading import Lock,Thread
 import BaseHTTPServer
 from SocketServer import ThreadingMixIn, TCPServer, BaseRequestHandler
@@ -6,6 +7,7 @@ import os
 from Webserver import *
 from Utils import *
 import urlparse
+import urllib2
 
 class AdminWebserver(Thread):
   daemon=True
@@ -109,6 +111,39 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       data += '<li><img src="%s" alt=""></li>'%img['service_uri']
     data += '</ul><html>'
     self.wfile.write(data)
+    
+  def _get_requests(self):
+    self.send_response(200)
+    self.end_headers()
+    requests = self.server.app.db.get_requests('type = "GET"')
+    data = '<html><ul>'
+    for req in requests:
+      headers = req['service_header'].split("\n")
+      data += '<li>%s : <a href="/api/request/%10f">%s</a><br/>%s</li>'%(req['service_request'], req['timestamp'], req['service_uri'], '<br/>'.join(headers))
+    data += '</ul><html>'
+    self.wfile.write(data)
+  
+  def _get_request(self, id):
+    self.send_response(200)
+    self.end_headers()
+    #TODO better id
+    request = self.server.app.db.get_requests('timestamp = "%s"'%id)[0]
+    req = urllib2.Request(request['service_uri'])
+    for h in request['service_header'].split("\n"):
+      items = h.split(":")
+      key = items[0]
+      value = ':'.join(items[1:])
+      req.add_header(key, value)
+    
+    response = urllib2.urlopen(req)
+    data = response.read()
+    
+    try:
+      data = zlib.decompress(data, 16+zlib.MAX_WBITS)
+    except:
+      pass
+    
+    self.wfile.write(data)
   
   def _get_version(self):
     self._send_json({'version':self.server.app.version})
@@ -173,7 +208,8 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
 
       elif len(args) == 2 and args[1] == 'version':
         return self._get_version()
-
+      elif len(args) == 3 and args[1] == 'request':
+        return self._get_request(args[2])
       else:
         self.send_response(400)
         self.end_headers()
@@ -181,6 +217,8 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
 
     elif len(args) == 1 and args[0] == 'images.html':
       return self._get_images()
+    elif len(args) == 1 and args[0] == 'requests.html':
+      return self._get_requests()
     elif len(args) == 1 and args[0] == 'cookie.txt':
       if 'bssid' in dparams and 'host' in dparams:
         (bssid,),(host,) = dparams['bssid'], dparams['host']

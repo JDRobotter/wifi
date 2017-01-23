@@ -120,8 +120,11 @@ class Karma2:
         
     if args.metasploit is not None:
       self.start_metasploit(args.metasploit)
-  
-    self.db = ClientsDatabase(self, args.database)
+    
+    if args.database is not None:
+      self.db = ClientsDatabase(self, args.database)
+    else:
+      self.db = ClientsDatabase(self)
     self.db.start()
 
     self.guessr = ServiceGuessr(self)
