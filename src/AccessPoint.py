@@ -78,7 +78,7 @@ class VirtualInterface(Thread):
     self.clients[mac]['last_activity'] = time.time()
   
   def register_client(self, mac,ip, name = ""):
-    if not self.clients.has_key(mac) and not mac in self.karma.ignore_bssid:
+    if not self.clients.has_key(mac) and not mac in self.karma.get_ignore_bssid():
       self.karma.total_client_count += 1
       self.unused = False
       self.clients[mac] = {'ip':ip, 'post':[], 'name': name, 'cookies':[],'last_activity': time.time()}
@@ -253,7 +253,7 @@ class VirtualInterface(Thread):
                 m = arp_watch_re.match(line)
                 if m is not None:
                   mac, ipsrc, ipdst = m.groups()
-                  if ipsrc == ipdst and mac not in self.karma.ignore_bssid:
+                  if ipsrc == ipdst and mac not in self.karma.get_ignore_bssid():
                     self.karma.log("%s Gratuitous arp from %s to %s"%(self.essid, ctxt(mac,GREEN), ctxt(ipdst,GREEN)))
                     subnet_base = "%s.%%d"%('.'.join(ipsrc.split('.')[:3]))
                     subnet = IPSubnet(subnet_base)
@@ -262,7 +262,7 @@ class VirtualInterface(Thread):
                       #self.setup_iface(self.ifhostapd.iface,subnet)
                     self.register_client(mac,ipsrc)
             if dns != {}:
-              if dns['bssid'] not in self.karma.ignore_bssid:
+              if dns['bssid'] not in self.karma.get_ignore_bssid():
                 self.client_ping(dns['bssid'])
                 self.karma.update_dns(dns)
                 self.karma.log( "%s %s"%(self.essid, 
@@ -531,9 +531,9 @@ class AccessPoint(Thread):
             if m is not None:
               mac, = m.groups()
               for v in self.virtuals:
-                if not v.clients.has_key(mac) and not mac in self.karma.ignore_bssid:
+                if not v.clients.has_key(mac) and not mac in self.karma.get_ignore_bssid():
                   self.karma.log( "Client %s associated to %s"%(ctxt(mac,GREEN),ctxt(self.get_essid(),GREEN)))
-                  if mac not in self.karma.ignore_bssid:
+                  if mac not in self.karma.get_ignore_bssid():
                     self.karma.db.new_ap_connection(v.bssid, v.essid, mac)
                     self.unused = False
 
@@ -621,9 +621,9 @@ class AccessPoint(Thread):
     
     i = 0
     for ap in self.aps[1:]:
-      interface = "%s_%s"%(interface[-3:], i)
-      ifaces[interface] = ap['essid']
-      f.write("bss=%s\n"%interface)
+      new_interface = "%s_%s"%(interface[-3:], i)
+      ifaces[new_interface] = ap['essid']
+      f.write("bss=%s\n"%new_interface)
       
       #may fail on some devices
       #f.write("bssid=%s\n"%(ap['bssid']))

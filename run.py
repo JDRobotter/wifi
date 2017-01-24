@@ -87,7 +87,6 @@ class Karma2:
     self.scan = args.scan
     self.debug = args.debug
     self.uri = args.uri
-    self.locals_interfaces = self.getWirelessInterfacesList()
     self.forbidden_aps = args.forbidden
     self.KEYFILE = KEYFILE
     self.CERTFILE = CERTFILE
@@ -96,10 +95,6 @@ class Karma2:
     self.ignore_bssid = []
     if args.ignore is not None:
       self.ignore_bssid = args.ignore[0]
-    for i in self.locals_interfaces:
-      self.ignore_bssid.append(self.getMacFromIface(i))
-    print self.ignore_bssid
-      
     self.redirections = {}
 
     if not args.offline:
@@ -130,6 +125,12 @@ class Karma2:
     self.guessr = ServiceGuessr(self)
 
     self.version = self.get_version()
+
+  def get_ignore_bssid(self):
+    bssids = self.ignore_bssid[:]
+    for i in self.getWirelessInterfacesList():
+      bssids.append(self.getMacFromIface(i))
+    return bssids
 
   def get_version(self):
     cmd = ['git','rev-parse','--short','HEAD']
