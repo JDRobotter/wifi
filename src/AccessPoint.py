@@ -476,6 +476,14 @@ class AccessPoint(Thread):
         random.randint(0, 255),
         )
 
+  def stop(self):
+    try:
+      self.hostapd_process.kill()
+      self.hostapd_process.wait()
+      time.sleep(0.5)
+    except:
+      self.karma.log( "%s could not kill hostapd"%ctxt("[!]",RED))
+
   def run(self):
     for v in self.virtuals:
       v.start()
@@ -493,6 +501,8 @@ class AccessPoint(Thread):
     disassociated_re = re.compile(r".*([a-zA-Z0-9:]+)*disassociated due to inactivity*")
     authenticated_re = re.compile(r".*: STA ([a-zA-Z0-9:]+) IEEE 802.11: authenticated")
     hostapd_fails_re = re.compile(r".*: Interface (\w+) wasn't started")
+    hostapd_unavailable_re = re.compile(r"(\w+): Event INTERFACE_UNAVAILABLE \(31\) received")
+
     
     while True:
       for v in self.virtuals:
@@ -528,7 +538,13 @@ class AccessPoint(Thread):
                     self.unused = False
 
             else:
-              m = hostapd_fails_re.match(line)
+              r = hostapd_unavailable_re.match(line)
+              r1 = hostapd_fails_re.match(line)
+              m = None
+              if r is not None:
+                m = r
+              if r1 is not None:
+                m = r
               if m is not None:
                 keep_hostapd_log = True
                 ifname, = m.groups()
@@ -536,12 +552,6 @@ class AccessPoint(Thread):
                 self.restart()
       
     print "no more hostapd"
-    try:
-      self.hostapd_process.kill()
-      self.hostapd_process.wait()
-      time.sleep(0.5)
-    except:
-      self.karma.log( "%s could not kill hostapd"%ctxt("[!]",RED))
     hostapd_log.close()
     if not (self.karma.debug or keep_hostapd_log):
       os.remove(hostapd_log.name)
