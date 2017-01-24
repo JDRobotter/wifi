@@ -158,6 +158,9 @@ function AppController($http, $scope, $mdDialog) {
     else if(name == 'leparisien') {
       return {"type":"md-icon","src":"assets/le_parisien.svg"}
     }
+    else if(name == 'snapchat') {
+      return {"type":"md-icon","src":"assets/snapchat.svg"}
+    }
     else if(infos.type == 'browser') {
       return {"type":"i","src":"picture_in_picture"}
     }
