@@ -287,7 +287,7 @@ class Karma2:
             and not essid in self.forbidden_aps):
             iface = self.ifhostapds.get_one()
             wpa = None
-            if args.wpa is not None:
+            if args.wpa:
               wpa = "glopglopglop"
             ap = [{
               'bssid':None,
