@@ -517,9 +517,6 @@ if __name__ == '__main__':
   except KeyboardInterrupt:
     pass
   finally:
-    if logfile is not None:
-      with log_lock:
-        logfile.close()
     if args.enable is not None:
       log( "[+] Stopping monitor interface %s properly"%args.monitor)
       cmd = ['airmon-ng','stop',args.monitor]
@@ -527,4 +524,9 @@ if __name__ == '__main__':
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
       p.wait()
+    if logfile is not None:
+      with log_lock:
+        l = logfile
+        logfile = None
+        l.close()
 
