@@ -570,10 +570,14 @@ class AccessPoint(Thread):
     if self.karma.debug:
       print hostapd_error
 
-  def get_essid(self):
+  def get_essids(self):
     essids = []
     for ap in self.aps:
       essids.append(ap['essid'])
+    return essids
+
+  def get_essid(self):
+    essids = self.get_essids()
     return '-'.join(essids)
 
   def get_bssid(self):
