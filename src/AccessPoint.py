@@ -94,6 +94,10 @@ class VirtualInterface(Thread):
     self.unused = False
     client = Client(self, mac)
     self.clients[mac] = client
+    
+  def unregister_client(self, client):
+    client.disconnected()
+    self.clients.pop(client)
   
   def client_connected(self, client):
       smb = SambaCrawler(self.karma, client.ip, 'smb_%s'%client.bssid)
@@ -166,6 +170,7 @@ class VirtualInterface(Thread):
     arp_watch_re = re.compile(r"(\w+:\w+:\w+:\w+:\w+:\w+) > .*\b((?:[0-9]{1,3}\.){3}[0-9]{1,3})\b tell \b((?:[0-9]{1,3}\.){3}[0-9]{1,3})\b")
     iwmon_station_re = re.compile(r"Station (\w+:\w+:\w+:\w+:\w+:\w+) \(on \w+\)")
     iwmon_kv_re = re.compile(r"\s*(.+):(.+?)$")
+    disassociated_re = re.compile(r".*([a-zA-Z0-9:]+).*disassociated due to inactivity*")
     while True:
       
       # check alive
@@ -224,14 +229,16 @@ class VirtualInterface(Thread):
                 if client is not None:
                   client.connected(ip, name)
                   self.client_connected(client)
-              #else:
-                # this regexp seems to be really slow
-                #m = disassociated_re.match(line)
-                ##print "000022"
-                #if m is not None:
-                  #mac = m.groups()
-                  #self.karma.log( "dissociated %s"%mac)
-                  #self.clients.pop(mac,None)
+              else:
+                m = disassociated_re.match(line)
+                if m is not None:
+                  mac = m.groups()
+                  self.karma.log( "dissociated %s"%mac)
+                  client = self.get_client(mac)
+                  for iface, v in self.virtuals.iteritems():
+                    c = v.get_client(mac)
+                    if c is None:
+                        v.unregister_client(c)
 
       if connwfd in rlist:
         lr = LineReader(self.connectionwatch_process.stdout.fileno())
@@ -263,7 +270,7 @@ class VirtualInterface(Thread):
                     'bssid': mac,
                     'host': host
                     }
-                  self.register_client(mac,ip)
+                  #self.register_client(mac,ip)
               else:
                 #check for gratuitous arp
                 m = arp_watch_re.match(line)
@@ -276,13 +283,13 @@ class VirtualInterface(Thread):
                     #if self.subnet.gateway() != subnet.gateway():
                       #self.karma.log("[+] switching to %s"%(ctxt(subnet.gateway(), GREEN)))
                       #self.setup_iface(self.ifhostapd.iface,subnet)
-                    self.register_client(mac,ipsrc)
+                    #self.register_client(mac,ipsrc)
             if dns != {}:
-              if dns['bssid'] not in self.karma.get_ignore_bssid():
-                self.client_ping(dns['bssid'])
-                self.karma.update_dns(dns)
-                self.karma.log( "%s %s"%(self.essid, 
-                  ctxt("%s => %s"%(dns['bssid'], dns['host']),GREY)))
+              c = self.get_client(dns['bssid'])
+              if c is not None:
+                self.karma.guessr.feed_dns_request(c, dns['host'])
+                c.register_service_request('DNS', dns['qtype'], dns['host'], '', '', True)
+                c.ping()
             self.activity_ts = time.time()
 
       for iwmonfd in iwmonfds:
@@ -476,10 +483,10 @@ class AccessPoint(Thread):
         ap['bssid'] = self.get_random_bssid()
     
     self.ifaces,self.hostapd_process = self.create_hostapd_access_point()
-    self.virtuals = []
+    self.virtuals = {}
     for iface, essid in self.ifaces.iteritems():
       bssid = 'TO_DO'
-      self.virtuals.append(VirtualInterface(self, iface, bssid, essid, fishing))
+      self.virtuals[iface] = VirtualInterface(self, iface, bssid, essid, fishing)
 
   def get_random_bssid(self):
     realmac = self.karma.getMacFromIface(self.ifhostapd.str()).split(':')
@@ -494,14 +501,14 @@ class AccessPoint(Thread):
 
 
   def get_client_from_ip(self, ip):
-    for v in self.virtuals:
+    for iface, v in self.virtuals.iteritems():
       c = v.get_client_from_ip(ip)
       if c is not None:
         return c
     return None
   
   def get_client(self, bssid):
-    for v in self.virtuals:
+    for iface,v in self.virtuals.iteritems():
       c = v.get_client(bssid)
       if c is not None:
         return c
@@ -516,7 +523,7 @@ class AccessPoint(Thread):
       self.karma.log( "%s could not kill hostapd"%ctxt("[!]",RED))
 
   def run(self):
-    for v in self.virtuals:
+    for iface, v in self.virtuals.iteritems():
       v.start()
     
     hostapd_log = None
@@ -529,14 +536,14 @@ class AccessPoint(Thread):
     airfd = self.hostapd_process.stdout.fileno()
     files.append(airfd)
     
-    disassociated_re = re.compile(r".*([a-zA-Z0-9:]+)*disassociated due to inactivity*")
-    authenticated_re = re.compile(r".*: STA ([a-zA-Z0-9:]+) IEEE 802.11: authenticated")
+    authenticated_re = re.compile(r"(.*): STA ([a-zA-Z0-9:]+) IEEE 802.11: authenticated")
+    associated_re = re.compile(r"(.*): STA ([a-zA-Z0-9:]+) IEEE 802.11: associated")
     hostapd_fails_re = re.compile(r".*: Interface (\w+) wasn't started")
     hostapd_unavailable_re = re.compile(r"(\w+): Event INTERFACE_UNAVAILABLE \(31\) received")
 
     
     while True:
-      for v in self.virtuals:
+      for iface, v in self.virtuals.iteritems():
         stop = True
         if v.activity_ts is None:
           stop = True
@@ -559,14 +566,16 @@ class AccessPoint(Thread):
               hostapd_log.write("%s\n"%line)
             #print "hostapd  %s"%line
             m = authenticated_re.match(line)
+            if m is None:
+              m = associated_re.match(line)
             if m is not None:
-              mac, = m.groups()
-              for v in self.virtuals:
-                if not v.clients.has_key(mac) and not mac in self.karma.get_ignore_bssid():
-                  self.karma.log( "Client %s associated to %s"%(ctxt(mac,GREEN),ctxt(v.essid,GREEN)))
-                  if mac not in self.karma.get_ignore_bssid():
-                    self.karma.db.new_ap_connection(v.bssid, v.essid, mac)
-                    self.unused = False
+              iface, mac, = m.groups()
+              v = self.virtuals[iface]
+              c = v.get_client(mac)
+              if c is None and not mac in self.karma.get_ignore_bssid():
+                if mac not in self.karma.get_ignore_bssid():
+                  v.register_client(mac)
+                  self.unused = False
 
             else:
               r = hostapd_unavailable_re.match(line)
@@ -586,9 +595,9 @@ class AccessPoint(Thread):
     hostapd_log.close()
     if not (self.karma.debug or keep_hostapd_log):
       os.remove(hostapd_log.name)
-    for v in self.virtuals:
+    for iface, v in self.virtuals.iteritems():
       v.stop()
-    for v in self.virtuals:
+    for iface, v in self.virtuals.iteritems():
       v.join()
       
     cmd = ["iwconfig", self.ifhostapd.str(), "mode", 'managed']

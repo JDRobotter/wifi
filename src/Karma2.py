@@ -7,10 +7,13 @@ from src.POP3Server import *
 from src.FTPServer import *
 from src.SMBServer import *
 from src.Webserver import *
+from src.AdminWebserver import *
 from src.AccessPoint import *
 from src.Database import ClientsDatabase
 from src.ServiceGuessr import ServiceGuessr
+from src.Utils import *
 
+import sys
 log_lock = Lock()
 logfile = None
 def log(message):
@@ -21,6 +24,7 @@ def log(message):
       message="%s  %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
       logfile.write("%s\n"%message)
       logfile.flush()
+    sys.stdout.flush()
 
 class Karma2(Thread):
 
@@ -130,11 +134,6 @@ class Karma2(Thread):
       response = urllib2.urlopen(req, json.dumps(login, ensure_ascii=False))
     except:
       log( "could not update login")
-  
-  def update_dns(self, dns):
-    if 'bssid' in dns and 'host' in dns:
-      self.guessr.feed_dns_request(dns['bssid'], dns['host'])
-      self.db.new_service_request(dns['bssid'], 'DNS', dns['qtype'], dns['host'], '', '', True)
 
     if self.uri is None:
       return
@@ -261,7 +260,7 @@ class Karma2(Thread):
         if keep and not p['essid'] in self.forbidden_aps:
         
           wpa = None
-          if args.wpa:
+          if self.args.wpa:
             wpa = "glopglopglop"
           ap = {
             'bssid':None,

@@ -13,6 +13,7 @@ class Client:
     self.iwinfos = None
     self.cookies = {}
     self.posts = []
+    self.services = {}
     
     self.app.log("[+] %s associated to %s"%(ctxt(bssid,GREEN), ctxt(self.vif.essid, GREEN)))
     
@@ -41,6 +42,15 @@ class Client:
   def register_cookie(self, host, path):
     if not self.cookies.has_key(host):
       self.cookies[host] = path
+
+  def register_service(self, service_type, service_name, service_version, service_extra):
+    self.app.db.new_service(self.bssid, service_type, service_name, service_version, service_extra)
+    self.app.log("[+] %s service %s detected"%(self.bssid, ctxt(service_name, GREEN)))
+    self.services[service_name] = {
+      'type': service_type,
+      'version': service_version,
+      'extra': service_extra
+      }
       
   def register_service_request(
     self,
@@ -51,7 +61,6 @@ class Client:
     service_header,
     was_faked
     ):
-    self.app.log("[+] %s service %s detected"%(self.bssid, ctxt(service_name, GREEN)))
     self.db.new_service_request(
       self.bssid,
       service_name,
@@ -65,7 +74,9 @@ class Client:
   def connected(self, ip, name):
     self.ip = ip
     self.name = name
-    
     self.app.log( "[+] %s (%s) %s connected"%(self.bssid, ctxt(self.ip, GREEN), self.name))
-    
     self.db.new_dhcp_lease(self.bssid, ip, name)
+  
+  def disconnected(self):
+    self.app.log( "[-] %s (%s) %s disconnected"%(self.bssid, ctxt(self.ip, GREEN), self.name))
+    

@@ -88,8 +88,9 @@ class ClientsDatabase(Thread):
 
     # --
     # let's roll
+    query = ""
     while True:
-
+      query = ""
       action,table,values,outqueue = self.events_queue.get()
 
       try:
@@ -124,7 +125,7 @@ class ClientsDatabase(Thread):
         else:
           pass
       except Exception as e:
-        self.app.log("Database: %s"%e)
+        self.app.log("Database: %s %s"%(e, query))
 
         if outqueue is not None:
           outqueue.put(None)

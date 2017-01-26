@@ -100,7 +100,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     protocol = ctxt(self.server.PRE,BLUE)
     if self.server.PRE == 'HTTPS':
       protocol = ctxt(self.server.PRE,RED)
-    self.server.app.log( "%s %s GET: %s => %s"%(essid,protocol,client,fullpath) )
+    self.server.app.log( "%s %s GET: %s => %s"%(essid,protocol,client.bssid,fullpath) )
 
     self.server.app.guessr.feed_http_request(client, self.server.PRE, path, params, self.headers)
 
@@ -318,7 +318,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       faked = False
 
     uri = "%s://%s"%(self.server.PRE.lower(),fullpath)
-    client.register_service_request(self.server.PRE, 'POST', uri, post, self.headers_to_text(), False)
+    client.register_service_request(self.server.PRE, 'POST', uri, '', self.headers_to_text(), False)
 
   def do_POST(self):
     ip = self.client_address[0]

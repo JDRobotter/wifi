@@ -11,7 +11,6 @@ import string
 import sys
 sys.path.insert(0,"./impacket/")
 
-from src.AdminWebserver import *
 from src.Utils import *
 from src.Karma2 import *
 
@@ -154,10 +153,8 @@ if __name__ == '__main__':
         aps.append({'bssid': bssid, 'essid': essid, 'wpa': wpa})
         
       km.create_aps(aps, 60*60*24*365)
-    
     if not args.test:
       km.do_sniff()
-
     while True:
       if args.test:
         char_set = string.ascii_uppercase + string.digits
@@ -190,6 +187,8 @@ if __name__ == '__main__':
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
       p.wait()
+    #need to be changed to wait for all threads
+    time.sleep(2)
     if logfile is not None:
       with log_lock:
         l = logfile
