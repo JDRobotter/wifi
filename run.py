@@ -41,7 +41,7 @@ def parse_args():
     parser.add_argument("-z", "--hostapd", help="hostapd binary path")
     parser.add_argument("-q", "--test", action='store_true', help="run test mode")
     parser.add_argument("-p", "--port", help="admin webserver port")
-    parser.add_argument("-y", "--virtual", help="virtual interfaces count (default is one by physical device)")
+    parser.add_argument("-y", "--virtual", help="virtual interfaces count (default is one for each physical device)")
     parser.add_argument('-i', '--ignore', help='ignore bssid ie. -i mac1 mac2 macN', action='append', nargs='*')
     return parser.parse_args()
 
