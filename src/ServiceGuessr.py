@@ -57,6 +57,9 @@ class ServiceGuessr:
     
     if host in ('api.leparisien.fr'):
       self.register_service(client.bssid, "app", "leparisien", '', '')
+    
+    if ('snapchat.com') in host:
+      self.register_service(client.bssid, "app", "snapchat", '', '')  
       
     if host in ('api-cdn.lemonde.fr'):
       self.register_service(client.bssid, "app", "lemonde", '', '')

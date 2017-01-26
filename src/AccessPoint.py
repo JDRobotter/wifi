@@ -269,7 +269,7 @@ class VirtualInterface(Thread):
                 m = arp_watch_re.match(line)
                 if m is not None:
                   mac, ipsrc, ipdst = m.groups()
-                  if ipsrc == ipdst and mac not in self.karma.ignore_bssid:
+                  if ipsrc == ipdst and mac not in self.karma.get_ignore_bssid():
                     self.karma.log("%s Gratuitous arp from %s to %s"%(self.essid, ctxt(mac,GREEN), ctxt(ipdst,GREEN)))
                     subnet_base = "%s.%%d"%('.'.join(ipsrc.split('.')[:3]))
                     subnet = IPSubnet(subnet_base)
@@ -278,7 +278,7 @@ class VirtualInterface(Thread):
                       #self.setup_iface(self.ifhostapd.iface,subnet)
                     self.register_client(mac,ipsrc)
             if dns != {}:
-              if dns['bssid'] not in self.karma.ignore_bssid:
+              if dns['bssid'] not in self.karma.get_ignore_bssid():
                 self.client_ping(dns['bssid'])
                 self.karma.update_dns(dns)
                 self.karma.log( "%s %s"%(self.essid, 
@@ -492,6 +492,7 @@ class AccessPoint(Thread):
         random.randint(0, 255),
         )
 
+
   def get_client_from_ip(self, ip):
     for v in self.virtuals:
       c = v.get_client_from_ip(ip)
@@ -505,6 +506,14 @@ class AccessPoint(Thread):
       if c is not None:
         return c
     return None
+
+  def stop(self):
+    try:
+      self.hostapd_process.kill()
+      self.hostapd_process.wait()
+      time.sleep(0.5)
+    except:
+      self.karma.log( "%s could not kill hostapd"%ctxt("[!]",RED))
 
   def run(self):
     for v in self.virtuals:
@@ -523,6 +532,8 @@ class AccessPoint(Thread):
     disassociated_re = re.compile(r".*([a-zA-Z0-9:]+)*disassociated due to inactivity*")
     authenticated_re = re.compile(r".*: STA ([a-zA-Z0-9:]+) IEEE 802.11: authenticated")
     hostapd_fails_re = re.compile(r".*: Interface (\w+) wasn't started")
+    hostapd_unavailable_re = re.compile(r"(\w+): Event INTERFACE_UNAVAILABLE \(31\) received")
+
     
     while True:
       for v in self.virtuals:
@@ -551,14 +562,20 @@ class AccessPoint(Thread):
             if m is not None:
               mac, = m.groups()
               for v in self.virtuals:
-                if not v.clients.has_key(mac) and not mac in self.karma.ignore_bssid:
+                if not v.clients.has_key(mac) and not mac in self.karma.get_ignore_bssid():
                   self.karma.log( "Client %s associated to %s"%(ctxt(mac,GREEN),ctxt(v.essid,GREEN)))
-                  if mac not in self.karma.ignore_bssid:
-                    v.register_client(mac)
+                  if mac not in self.karma.get_ignore_bssid():
+                    self.karma.db.new_ap_connection(v.bssid, v.essid, mac)
                     self.unused = False
 
             else:
-              m = hostapd_fails_re.match(line)
+              r = hostapd_unavailable_re.match(line)
+              r1 = hostapd_fails_re.match(line)
+              m = None
+              if r is not None:
+                m = r
+              if r1 is not None:
+                m = r
               if m is not None:
                 keep_hostapd_log = True
                 ifname, = m.groups()
@@ -566,12 +583,6 @@ class AccessPoint(Thread):
                 self.restart()
       
     print "no more hostapd"
-    try:
-      self.hostapd_process.kill()
-      self.hostapd_process.wait()
-      time.sleep(0.5)
-    except:
-      self.karma.log( "%s could not kill hostapd"%ctxt("[!]",RED))
     hostapd_log.close()
     if not (self.karma.debug or keep_hostapd_log):
       os.remove(hostapd_log.name)
@@ -590,10 +601,14 @@ class AccessPoint(Thread):
     if self.karma.debug:
       print hostapd_error
 
-  def get_essid(self):
+  def get_essids(self):
     essids = []
     for ap in self.aps:
       essids.append(ap['essid'])
+    return essids
+
+  def get_essid(self):
+    essids = self.get_essids()
     return '-'.join(essids)
 
   def get_bssid(self):
@@ -643,9 +658,9 @@ class AccessPoint(Thread):
     
     i = 0
     for ap in self.aps[1:]:
-      interface = "%s_%s"%(interface[-3:], i)
-      ifaces[interface] = ap['essid']
-      f.write("bss=%s\n"%interface)
+      new_interface = "%s_%s"%(interface[-3:], i)
+      ifaces[new_interface] = ap['essid']
+      f.write("bss=%s\n"%new_interface)
       
       #may fail on some devices
       #f.write("bssid=%s\n"%(ap['bssid']))

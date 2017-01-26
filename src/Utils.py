@@ -54,18 +54,18 @@ class LineReader(object):
   
   
 class WLANInterface:
-  def __init__(self, iface):
+  def __init__(self, iface, virtuals):
     self.iface = iface
     # iw list | grep "valid interface combinations"
-    self.available_ap = 1
+    self.available_ap = virtuals
     self.available = True
 
   def str(self):
     return self.iface
 
 class WLANInterfaces:
-  def __init__(self, ifs):
-    self.ifs = [WLANInterface(_if) for _if in ifs]
+  def __init__(self, ifs, virtuals):
+    self.ifs = [WLANInterface(_if, virtuals) for _if in ifs]
 
   def get_one(self):
     ifs = filter(lambda iface:iface.available, self.ifs)

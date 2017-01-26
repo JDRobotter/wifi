@@ -46,7 +46,6 @@ def parse_args():
     parser.add_argument('-i', '--ignore', help='ignore bssid ie. -i mac1 mac2 macN', action='append', nargs='*')
     return parser.parse_args()
 
-
 if __name__ == '__main__':
 
   # parse command line
@@ -183,6 +182,7 @@ if __name__ == '__main__':
   except KeyboardInterrupt:
     pass
   finally:
+    km.stop()
     if args.enable is not None:
       log( "[+] Stopping monitor interface %s properly"%args.monitor)
       cmd = ['airmon-ng','stop',args.monitor]

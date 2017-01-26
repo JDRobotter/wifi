@@ -1,7 +1,7 @@
 CERTFILE='./cert.pem'
 KEYFILE='./key.pem'
 
-
+from Queue import Queue
 from src.SambaCrawler import *
 from src.POP3Server import *
 from src.FTPServer import *
@@ -22,9 +22,11 @@ def log(message):
       logfile.write("%s\n"%message)
       logfile.flush()
 
-class Karma2:
+class Karma2(Thread):
 
   def __init__(self, args):
+    Thread.__init__(self)
+    self.probes_queue = Queue()
     self.logpath = args.logpath
     if not os.path.exists(self.logpath):
       os.mkdir(self.logpath)
@@ -32,7 +34,10 @@ class Karma2:
     self.wpa = args.wpa
     self.ifmon = args.monitor
     self.ifgw = args.gateway
-    self.ifhostapds = WLANInterfaces(args.hostapds)
+    virtual = 1
+    if args.virtual is not None:
+      virtual = args.virtual
+    self.ifhostapds = WLANInterfaces(args.hostapds, virtual)
     self.aps = {}
     self.subnets = set(xrange(50,256)) 
     self.clear_iptables()
@@ -41,19 +46,15 @@ class Karma2:
     self.scan = args.scan
     self.debug = args.debug
     self.uri = args.uri
-    self.locals_interfaces = self.getWirelessInterfacesList()
     self.forbidden_aps = args.forbidden
     self.KEYFILE = KEYFILE
     self.CERTFILE = CERTFILE
     self.args = args
+    self.running = None
 
     self.ignore_bssid = []
     if args.ignore is not None:
       self.ignore_bssid = args.ignore[0]
-    for i in self.locals_interfaces:
-      self.ignore_bssid.append(self.getMacFromIface(i))
-    print self.ignore_bssid
-      
     self.redirections = {}
 
     if not args.offline:
@@ -84,6 +85,12 @@ class Karma2:
     self.guessr = ServiceGuessr(self)
 
     self.version = self.get_version()
+
+  def get_ignore_bssid(self):
+    bssids = self.ignore_bssid[:]
+    for i in self.getWirelessInterfacesList():
+      bssids.append(self.getMacFromIface(i))
+    return bssids
 
   def get_version(self):
     cmd = ['git','rev-parse','--short','HEAD']
@@ -210,11 +217,7 @@ class Karma2:
 
       # get aps for this ap
       n = iface.available_ap # not implemented, always 1
-      if self.args.virtual is None:
-        n = 1
-      else:
-        #n = min(n, self.args.virtual)
-        n = self.args.virtual
+      n = min(n, self.args.virtual)
       maps = aps[:n]
       aps = aps[n:]
       
@@ -226,28 +229,50 @@ class Karma2:
   def create_ap(self, iface, aps, timeout=30):
     if iface is None:
       return
-    #if iface.available_ap >= len(aps):
-    ap = AccessPoint(self, iface, aps, timeout)
-    for e in essid:
-      self.register_ap(iface,ap)
-    ap.daemon = True
-    ap.start()
-    #else:
-      #log("Too many ap %s to create for this interface %s"%(len(essid), iface.str()))
+    if iface.available_ap >= len(aps):
+      ap = AccessPoint(self, iface, aps, timeout)
+      for v in ap.virtuals:
+        self.register_ap(iface,ap)
+      ap.daemon = True
+      ap.start()
+    else:
+      log("Too many ap %s to create for this interface %s"%(len(essid), iface.str()))
 
   def process_probe(self, essid, bssid = None):
-    if (not essid in self.aps.keys()
-            and not essid in self.forbidden_aps):
-            iface = self.ifhostapds.get_one()
-            wpa = None
-            if args.wpa:
-              wpa = "glopglopglop"
-            ap = [{
-              'bssid':None,
-              'essid': essid,
-              'wpa': wpa
-              }]
-            self.create_ap(iface, ap, 30)
+    self.probes_queue.put({
+      'timestamp': time.time(),
+      'bssid':bssid,
+      'essid':essid
+      })
+  
+  def stop(self):
+    self.running = False
+  
+  def run(self):
+    self.running = True
+    while self.running:
+      aps = []
+      while not self.probes_queue.empty():
+        keep = True
+        p = self.probes_queue.get()
+        for i,a in self.aps.iteritems():
+          if p['essid'] in a.get_essids():
+            keep = False
+        if keep and not p['essid'] in self.forbidden_aps:
+        
+          wpa = None
+          if args.wpa:
+            wpa = "glopglopglop"
+          ap = {
+            'bssid':None,
+            'essid': p['essid'],
+            'wpa': wpa
+            }
+          aps.append(ap)
+          
+      if len(aps) > 0:
+        self.create_aps(aps, 30)
+      time.sleep(1)
   
   def getWirelessInterfacesList(self):
     networkInterfaces=[]		
@@ -263,46 +288,51 @@ class Karma2:
     return networkInterfaces
   
   def do_sniff(self):
-    if self.ifmon is not None and 'http' in self.ifmon:
-      while True:
-        data = None
-        try:
-          req = urllib2.Request("%s/status.json"%self.ifmon)
-          f = urllib2.urlopen(req)
-          data = f.read()
-          j =  json.loads(data)
-          for p in j['current']['probes']:
-            bssid = None
-            try:
-              bssid = p['ap'][0][0]
-            except:
-              pass
-            found = False
-            for w in j['current']['wifis']:
-              if p['essid'] == w['essid']:
-                found = True
-                break
-            if not found:
-              if not p['bssid'] in self.ignore_bssid:
-                self.process_probe(p['essid'], bssid)
-        except Exception as e:
-          log( "Probes %s"%e)
+    self.start()
+    if self.ifmon is not None:
+      if 'http' in self.ifmon:
+        while True:
+          data = None
           try:
-            f = open("/tmp/wifi-probes.json", 'w')
-            f.write(data)
-            f.close()
+            req = urllib2.Request("%s/status.json"%self.ifmon)
+            f = urllib2.urlopen(req)
+            data = f.read()
+            j =  json.loads(data)
+            for p in j['current']['probes']:
+              bssid = None
+              try:
+                bssid = p['ap'][0][0]
+              except:
+                pass
+              found = False
+              for w in j['current']['wifis']:
+                if p['essid'] == w['essid']:
+                  found = True
+                  break
+              if not found:
+                if not p['bssid'] in self.ignore_bssid:
+                  self.process_probe(p['essid'], bssid)
           except Exception as e:
-            log("probes backup %s"%e)
-        time.sleep(0.5)
+            log( "Probes %s"%e)
+            try:
+              f = open("/tmp/wifi-probes.json", 'w')
+              f.write(data)
+              f.close()
+            except Exception as e:
+              log("probes backup %s"%e)
+          time.sleep(0.5)
+      else:
+        def _filter(packet):
+          if packet.haslayer(Dot11ProbeReq):
+            section = packet[Dot11ProbeReq][Dot11Elt]
+            # SSID
+            if section.ID == 0 and section.info != '':
+              self.process_probe(section.info)
+        
+        sniff(prn=_filter,store=0)
     else:
-      def _filter(packet):
-        if packet.haslayer(Dot11ProbeReq):
-          section = packet[Dot11ProbeReq][Dot11Elt]
-          # SSID
-          if section.ID == 0 and section.info != '':
-            self.process_probe(section.info)
-      
-      sniff(prn=_filter,store=0)
+      while True:
+        time.sleep(1)
 
   def start_adminserver(self, km, port):
     aserver = AdminWebserver(km, port)
