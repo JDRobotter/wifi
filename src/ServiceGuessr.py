@@ -38,110 +38,110 @@ class ServiceGuessr:
   def get_device(self, mac):
     return self.device_guessr.get_device_from_mac(mac)
 
-  def register_service(self, client_mac, service_type, service_name, service_version, service_extra):
-    self.karma.db.new_service(client_mac, service_type, service_name, service_version, service_extra)
-    if not self.services.has_key(client_mac):
-      self.services[client_mac] = {}
-    self.services[client_mac][service_name] = {
+  def register_service(self, client, service_type, service_name, service_version, service_extra):
+    self.karma.db.new_service(client.bssid, service_type, service_name, service_version, service_extra)
+    if not self.services.has_key(client.bssid):
+      self.services[client.bssid] = {}
+    self.services[client.bssid][service_name] = {
       'type': service_type,
       'version': service_version,
       'extra': service_extra
       }
     
 
-  def feed_dns_request(self, client_mac, host):
-    if not self.dns.has_key(client_mac):
-      self.dns[client_mac] = []
-    if not host in self.dns[client_mac]:
-      self.dns[client_mac].append(host)
+  def feed_dns_request(self, client, host):
+    if not self.dns.has_key(client.bssid):
+      self.dns[client.bssid] = []
+    if not host in self.dns[client.bssid]:
+      self.dns[client.bssid].append(host)
     
     if host in ('api.leparisien.fr'):
-      self.register_service(client_mac, "app", "leparisien", '', '')
+      self.register_service(client.bssid, "app", "leparisien", '', '')
       
     if host in ('api-cdn.lemonde.fr'):
-      self.register_service(client_mac, "app", "lemonde", '', '')
+      self.register_service(client.bssid, "app", "lemonde", '', '')
     
     if host in ('mobile-apps.guardianapis.com'):
-      self.register_service(client_mac, "app", "theguardian", '', '')
+      self.register_service(client.bssid, "app", "theguardian", '', '')
      
     if host in ('app.secure.particuliers.societegenerale.mobi'):
-      self.register_service(client_mac, "app", "societegenerale", '', '') 
+      self.register_service(client.bssid, "app", "societegenerale", '', '') 
     
     if host in ('ping3.teamviewer.com'):
-      self.register_service(client_mac, "app", "teamviewer", '', '')
+      self.register_service(client.bssid, "app", "teamviewer", '', '')
       
     if host in ('api.deezer.com'):
-      self.register_service(client_mac, "app", "deezer", '', '')
+      self.register_service(client.bssid, "app", "deezer", '', '')
       return
     
     if host in ('apresolve.spotify.com',):
-      self.register_service(client_mac, "app", "spotify", '', '')
+      self.register_service(client.bssid, "app", "spotify", '', '')
       return
     
     if host in ('airbnb.com',):
-      self.register_service(client_mac, "app", "airbnb", '', '')
+      self.register_service(client.bssid, "app", "airbnb", '', '')
       return
     
     m = re.match(r'.*dropbox.com$',host)
     if m is not None:
-      self.register_service(client_mac, "app", "dropbox", '', '')
+      self.register_service(client.bssid, "app", "dropbox", '', '')
       return
     
     m = re.match(r'.*bitdefender.com',host)
     if m is not None:
-      self.register_service(client_mac, "antivirus", "bitdefender", '', '')
+      self.register_service(client.bssid, "antivirus", "bitdefender", '', '')
       return
     
     if host in ('incoming.telemetry.mozilla.org',):
-      self.register_service(client_mac, "app", "firefox", '', '')
+      self.register_service(client.bssid, "app", "firefox", '', '')
       return
 
     m = re.match(r'\w.config.skype.com', host)
     if m is not None:
-      self.register_service(client_mac, "app", "skype", '', '')
+      self.register_service(client.bssid, "app", "skype", '', '')
       return
 
     m = re.match(r'.*mtalk.google.com$',host)
     if m is not None:
-      self.register_service(client_mac, "app", "gtalk", '', '')
+      self.register_service(client.bssid, "app", "gtalk", '', '')
       return
 
     m = re.match(r'imap.gmail.com', host)
     if m is not None:
-      self.register_service(client_mac, "app", "imap-gmail", '', '')
+      self.register_service(client.bssid, "app", "imap-gmail", '', '')
       return
 
     m = re.match(r'imap.aol.com', host)
     if m is not None:
-      self.register_service(client_mac, "app", "imap-aol", '', '')
+      self.register_service(client.bssid, "app", "imap-aol", '', '')
       return
 
     m = re.match(r'skydrive.wns.windows.com', host)
     if m is not None:
-      self.register_service(client_mac, "app", "skydrive", '', '')
+      self.register_service(client.bssid, "app", "skydrive", '', '')
 
     m = re.match(r'\w\+.whatsapp.net', host)
     if m is not None:
-      self.register_service(client_mac, "app", "whatsapp", '', '')
+      self.register_service(client.bssid, "app", "whatsapp", '', '')
       return
 
     if host in ('portal.fb.com',):
-      self.register_service(client_mac, "app", "facebook", '', '')
+      self.register_service(client.bssid, "app", "facebook", '', '')
       return
 
     if host in ('graph.instagram.com','i.instagram.com'):
-      self.register_service(client_mac, "app", "instagram", '', '')
+      self.register_service(client.bssid, "app", "instagram", '', '')
       return
 
     if host in ('dailymotion-mobile-compute.appspot.com',):
-      self.register_service(client_mac, "app", "dailymotion", '', '')
+      self.register_service(client.bssid, "app", "dailymotion", '', '')
       return
 
     if host in ('tts.waze.com',):
-      self.register_service(client_mac, "app", "waze", '', '')
+      self.register_service(client.bssid, "app", "waze", '', '')
       return
 
-  def feed_http_request(self, client_mac, protocol, path, params, headers):
+  def feed_http_request(self, client, protocol, path, params, headers):
     dparams = self.split_params(params)
     if 'user-agent' in headers:
       ua_string = headers['user-agent']
@@ -149,12 +149,12 @@ class ServiceGuessr:
       infos = ua_parse(ua_string)
 
       if infos.device.brand is not None and infos.device.model is not None:
-        self.device_guessr.new_hint(client_mac,
+        self.device_guessr.new_hint(client.bssid,
           infos.device.brand,
           infos.device.model,
           infos.device.family)
 
-      self.register_service(client_mac, "browser",
+      self.register_service(client.bssid, "browser",
         infos.browser.family,
         '.'.join([str(x) for x in infos.browser.version]),
         infos.browser.version_string)
@@ -162,47 +162,47 @@ class ServiceGuessr:
       m = re.match("Network Info II rv:(\d\.\d\.\d)", ua_string)
       if m is not None:
         version, = m.groups()
-        self.register_service(client_mac, "app", "network-info-II", version, '')
+        self.register_service(client.bssid, "app", "network-info-II", version, '')
 
       m = re.match("Skype WISPr", ua_string)
       if m is not None:
-        self.register_service(client_mac, "app", "skype", '', '')
+        self.register_service(client.bssid, "app", "skype", '', '')
 
     if 'host' in headers:
       host = headers['host']
       if host in ('portal.fb.com',):
-        self.register_service(client_mac, "app", "facebook-messenger", '', '')
+        self.register_service(client.bssid, "app", "facebook-messenger", '', '')
       
       elif host in ('voyagessncf.sc.omtrdc.net','t.voyages-sncf.com'):
 
         version = headers.get('ea-appversion','')
-        self.register_service(client_mac, "app", "voyages-sncf", version, host)
+        self.register_service(client.bssid, "app", "voyages-sncf", version, host)
  
       elif host in ('api.openweathermap.org',):
-        self.register_service(client_mac, "app", "openweathermap", '', 
+        self.register_service(client.bssid, "app", "openweathermap", '', 
           'lat:%s,lon:%s'%(dparams.get('lat','?'),dparams.get('lon','?')))
 
       elif host in ('www.msftconnecttest.com','ipv6.msftconnecttest.com'):
-        self.register_service(client_mac, "os", "windows", "", "")
+        self.register_service(client.bssid, "os", "windows", "", "")
 
       elif host in ('ctldl.windowsupdate.com',):
-        self.register_service(client_mac, "os", "windows-update", '', '')
+        self.register_service(client.bssid, "os", "windows-update", '', '')
         return
 
       elif host in ('tts.waze.com',):
-        self.register_service(client_mac, "app", "waze", '', '')
+        self.register_service(client.bssid, "app", "waze", '', '')
         return
       
       elif host in ('dnsproxy.ff.avast.com',):
-        self.register_service(client_mac, "app", "avast", '', '')
+        self.register_service(client.bssid, "app", "avast", '', '')
         return
 
     # voyage sncf
     if path.startswith('ext/editorial/inApp'):
-      self.register_service(client_mac, "app", "voyages-sncf", '', path)
+      self.register_service(client.bssid, "app", "voyages-sncf", '', path)
 
     # WINDOWS 10 live tiles
     elif ((re.match(r'\w\w-\w\w/video/feeds',path) is not None)
       or  (re.match(r'cgtile/v1/\w\w-\w\w',path) is not None)
       or  (re.match(r'HnFService.svc/GetLiveTileMetaData',path) is not None)):
-      self.register_service(client_mac, "os", "windows10", '', '')
+      self.register_service(client.bssid, "os", "windows10", '', '')

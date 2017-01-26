@@ -7,6 +7,7 @@ from datetime import datetime
 import random
 from SambaCrawler import *
 from Utils import *
+from Client import *
 
 class VirtualInterface(Thread):
   def __init__(self,ap, iface,bssid, essid, fishing):
@@ -75,16 +76,27 @@ class VirtualInterface(Thread):
     return p
             
   def client_ping(self, mac):
-    self.clients[mac]['last_activity'] = time.time()
+    self.clients[mac].ping()
   
-  def register_client(self, mac,ip, name = ""):
-    if not self.clients.has_key(mac) and not mac in self.karma.ignore_bssid:
-      self.karma.total_client_count += 1
-      self.unused = False
-      self.clients[mac] = {'ip':ip, 'post':[], 'name': name, 'cookies':[],'last_activity': time.time()}
-      self.karma.log( "new client %s (%s) %s"%(mac, ctxt(ip, GREEN), name))
-      self.karma.db.new_dhcp_lease(mac, ip, name)
-      smb = SambaCrawler(self.karma, ip, 'smb_%s'%mac)
+  def get_client_from_ip(self, ip):
+    for bssid, c in self.clients.iteritems():
+      if c.ip == ip:
+        return c
+    return None
+  
+  def get_client(self, bssid):
+    if self.clients.has_key(bssid):
+      return self.clients[bssid]
+    return None
+  
+  def register_client(self, mac):
+    self.karma.total_client_count += 1
+    self.unused = False
+    client = Client(self, mac)
+    self.clients[mac] = client
+  
+  def client_connected(self, client):
+      smb = SambaCrawler(self.karma, client.ip, 'smb_%s'%client.bssid)
       smb.start()
       if self.karma.scan:
         try:
@@ -139,6 +151,7 @@ class VirtualInterface(Thread):
     except:
       pass
     self.karma.free_subnet(self.subnet)
+    
   
   def run(self):
     set_title('virtual %s'%self.essid)
@@ -207,7 +220,10 @@ class VirtualInterface(Thread):
               m = dhcpack_re.match(line)
               if m is not None:
                 ip,mac,name = m.groups()
-                self.register_client(mac, ip, name)
+                client = self.get_client(mac)
+                if client is not None:
+                  client.connected(ip, name)
+                  self.client_connected(client)
               #else:
                 # this regexp seems to be really slow
                 #m = disassociated_re.match(line)
@@ -288,10 +304,10 @@ class VirtualInterface(Thread):
                 v = v.strip(" \t")
                 mac = station.lower()
                 if mac in self.clients:
-                  if 'iwinfos' in self.clients[mac]:
-                    self.clients[mac]['iwinfos'][k] = v
+                  if self.clients[mac].iwinfos is not None:
+                    self.clients[mac].iwinfos[k] = v
                   else:
-                    self.clients[mac]['iwinfos'] = {k:v}
+                    self.clients[mac].iwinfos = {k:v}
 
   def iw_monitoring_is_done(self):
     tbrm = []
@@ -476,6 +492,20 @@ class AccessPoint(Thread):
         random.randint(0, 255),
         )
 
+  def get_client_from_ip(self, ip):
+    for v in self.virtuals:
+      c = v.get_client_from_ip(ip)
+      if c is not None:
+        return c
+    return None
+  
+  def get_client(self, bssid):
+    for v in self.virtuals:
+      c = v.get_client(bssid)
+      if c is not None:
+        return c
+    return None
+
   def run(self):
     for v in self.virtuals:
       v.start()
@@ -522,9 +552,9 @@ class AccessPoint(Thread):
               mac, = m.groups()
               for v in self.virtuals:
                 if not v.clients.has_key(mac) and not mac in self.karma.ignore_bssid:
-                  self.karma.log( "Client %s associated to %s"%(ctxt(mac,GREEN),ctxt(self.get_essid(),GREEN)))
+                  self.karma.log( "Client %s associated to %s"%(ctxt(mac,GREEN),ctxt(v.essid,GREEN)))
                   if mac not in self.karma.ignore_bssid:
-                    self.karma.db.new_ap_connection(v.bssid, v.essid, mac)
+                    v.register_client(mac)
                     self.unused = False
 
             else:
@@ -573,6 +603,8 @@ class AccessPoint(Thread):
     return '-'.join(bssids)
 
   def create_hostapd_access_point(self):
+    if len(self.aps) == 0:
+      return {},None
     text = ' creating '
     for ap in self.aps:
       text += ' %s:%s:%s'%(ctxt(ap['essid'],GREEN), ap['bssid'], ap['wpa'])
