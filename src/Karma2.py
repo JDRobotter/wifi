@@ -1,7 +1,6 @@
 CERTFILE='./cert.pem'
 KEYFILE='./key.pem'
 
-from Queue import Queue
 from src.SambaCrawler import *
 from src.POP3Server import *
 from src.FTPServer import *
@@ -30,7 +29,7 @@ class Karma2(Thread):
 
   def __init__(self, args):
     Thread.__init__(self)
-    self.probes_queue = Queue()
+    self.probes_queue = []
     self.logpath = args.logpath
     if not os.path.exists(self.logpath):
       os.mkdir(self.logpath)
@@ -120,10 +119,14 @@ class Karma2(Thread):
             return m
   
   def getMacFromIface(self, _iface):
+    try:
       path = "/sys/class/net/%s/address"%_iface
       data = open(path,'r').read()
       data = data[0:-1] # remove EOL
       return data
+    except IOError:
+      self.log("[%s] iface %s not found"%(ctxt("!", RED),_iface))
+      
   
   def update_login(self, login):
     if self.uri is None:
@@ -238,11 +241,19 @@ class Karma2(Thread):
       log("Too many ap %s to create for this interface %s"%(len(essid), iface.str()))
 
   def process_probe(self, essid, bssid = None):
-    self.probes_queue.put({
-      'timestamp': time.time(),
-      'bssid':bssid,
-      'essid':essid
-      })
+    keep = True
+    for p in self.probes_queue:
+      if p['essid'] == essid:
+        keep = False
+    for i,a in self.aps.iteritems():
+      if essid in a.get_essids():
+        keep = False
+    if keep:
+      self.probes_queue.append({
+        'timestamp': time.time(),
+        'bssid':bssid,
+        'essid':essid
+        })
   
   def stop(self):
     self.running = False
@@ -251,9 +262,9 @@ class Karma2(Thread):
     self.running = True
     while self.running:
       aps = []
-      while not self.probes_queue.empty():
+      while len(self.probes_queue) != 0:
         keep = True
-        p = self.probes_queue.get()
+        p = self.probes_queue.pop(0)
         for i,a in self.aps.iteritems():
           if p['essid'] in a.get_essids():
             keep = False
@@ -268,7 +279,7 @@ class Karma2(Thread):
             'wpa': wpa
             }
           aps.append(ap)
-          
+
       if len(aps) > 0:
         self.create_aps(aps, 30)
       time.sleep(1)

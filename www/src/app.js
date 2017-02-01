@@ -161,6 +161,10 @@ function AppController($http, $scope, $mdDialog) {
     else if(name == 'snapchat') {
       return {"type":"md-icon","src":"assets/snapchat.svg"}
     }
+    else if(name == 'Android') {
+      return {"type":"md-icon","src":"assets/android.svg"}
+    }
+    //TODO add apple
     else if(infos.type == 'browser') {
       return {"type":"i","src":"picture_in_picture"}
     }

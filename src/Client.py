@@ -14,6 +14,7 @@ class Client:
     self.cookies = {}
     self.posts = []
     self.services = {}
+    self.data = {}
     
     self.app.log("[+] %s associated to %s"%(ctxt(bssid,GREEN), ctxt(self.vif.essid, GREEN)))
     

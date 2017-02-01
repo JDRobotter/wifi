@@ -399,3 +399,5 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     
     if host == "api.deezer.com" and path == "1.0/gateway.php":
       deezer = json.loads(post)
+      client.data['deezer'] = deezer
+      

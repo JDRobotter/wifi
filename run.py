@@ -151,8 +151,12 @@ if __name__ == '__main__':
           pass
         
         aps.append({'bssid': bssid, 'essid': essid, 'wpa': wpa})
+      
+      try:
+        km.create_aps(aps, 60*60*24*365)
+      except:
+        log("[%s] could not create aps from command line"%ctxt("!", RED))
         
-      km.create_aps(aps, 60*60*24*365)
     if not args.test:
       km.do_sniff()
     while True:

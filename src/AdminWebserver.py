@@ -54,6 +54,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
 
     status = {}
     status['total_client_count'] = self.server.app.total_client_count
+    status['probes_queue'] = self.server.app.probes_queue
     status['aps'] = {}
     for iface,ap in self.server.app.aps.iteritems():
       for iface, viface in ap.virtuals.iteritems():
