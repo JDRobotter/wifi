@@ -5,7 +5,7 @@ from Queue import Queue
 class ClientsDatabase(Thread):
   daemon = True
 
-  def __init__(self, app, path = 'client.db'):
+  def __init__(self, app, path = 'clients.db'):
     Thread.__init__(self)
     self.events_queue = Queue()
     self.app = app
