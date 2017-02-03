@@ -143,6 +143,9 @@ function AppController($http, $scope, $mdDialog) {
     else if(name == 'bitdefender') {
       return {"type":"md-icon","src":"assets/Bitdefender.svg"}
     }
+    else if(name == 'avast') {
+      return {"type":"md-icon","src":"assets/avast.svg"}
+    }
     else if(name == 'Apache-HttpClient') {
       return {"type":"md-icon","src":"assets/apache_http.svg"}
     }
