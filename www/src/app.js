@@ -104,8 +104,26 @@ function AppController($http, $scope, $mdDialog) {
     else if(name == 'imap-gmail') {
       return {"type":"md-icon","src":"assets/gmail.svg"}
     }
+    else if(name == 'Mobile Safari' || name == 'Safari' || name == 'Mobile Safari UI/WKWebView') {
+      return {"type":"md-icon","src":"assets/safari.svg"}
+    }
+    else if(name == 'Chrome' || name == 'Chrome Mobile' || name == 'Chromium' ) {
+      return {"type":"md-icon","src":"assets/chrome.svg"}
+    }
+    else if(name == 'Firefox' ) {
+      return {"type":"md-icon","src":"assets/firefox.svg"}
+    }
+    else if(name == 'IE' || name == 'IE Mobile') {
+      return {"type":"md-icon","src":"assets/ie.svg"}
+    }
     else if(name == 'facebook') {
       return {"type":"md-icon","src":"assets/facebook.svg"}
+    }
+    else if(name == 'bitdefender') {
+      return {"type":"md-icon","src":"assets/Bitdefender.svg"}
+    }
+    else if(name == 'Apache-HttpClient') {
+      return {"type":"md-icon","src":"assets/apache_http.svg"}
     }
     else if(name == 'gtalk') {
       return {"type":"img","src":"assets/hangout.png"}
@@ -117,6 +135,9 @@ function AppController($http, $scope, $mdDialog) {
       return {"type":"md-icon","src":"assets/instagram.svg"}
     }
     else if(name == 'windows') {
+      return {"type":"md-icon","src":"assets/windows.svg"}
+    }
+    else if(name == 'windows10') {
       return {"type":"md-icon","src":"assets/windows.svg"}
     }
     else if(name == 'skype') {
@@ -178,11 +199,15 @@ function AppController($http, $scope, $mdDialog) {
     }
     else if(name == 'soundcloud') {
       return {"type":"md-icon","src":"assets/soundcloud.svg"}
+    else if(name == 'Python-urllib') {
+      return {"type":"md-icon","src":"assets/Python.svg"}
     }
     else if(name == 'Android') {
       return {"type":"md-icon","src":"assets/android.svg"}
     }
-    //TODO add apple
+    else if(name == 'CFNetwork') {
+      return {"type":"md-icon","src":"assets/apple.svg"}
+    }
     else if(infos.type == 'browser') {
       return {"type":"i","src":"picture_in_picture"}
     }
