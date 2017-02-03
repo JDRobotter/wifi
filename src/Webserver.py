@@ -12,6 +12,8 @@ import urllib2
 
 from Utils import *
 
+
+
 class Webserver(Thread):
   daemon=True
   def __init__(self, app, port = 80):
@@ -50,7 +52,10 @@ class SSLWebserver(Webserver):
 class HTTPServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
   allow_reuse_address = True
   daemon_threads = True
-
+  
+  def handle_error(self, request, client_address):
+    self.app.log("[%s] error handling %s from %s"%(ctxt("x",RED), request, client_address))
+  
   def __init__(self, server_address, app, RequestHandlerClass, bind_and_activate=True, www = 'www'):
     BaseHTTPServer.HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
     self.app = app
