@@ -107,16 +107,16 @@ class Karma2(Thread):
   
   def get_client_ap(self,ip):
     for iface,ap in self.aps.iteritems():
-      for v in ap.virtuals:
+      for k,v in ap.virtuals.iteritems():
         for m,c in v.clients.iteritems():
-          if c['ip'] == ip:
+          if c.ip == ip:
             return ap
 
   def get_client_bssid(self, ip):
     for iface,ap in self.aps.iteritems():
-      for v in ap.virtuals:
+      for k,v in ap.virtuals.iteritems():
         for m,c in v.clients.iteritems():
-          if c['ip'] == ip:
+          if c.ip == ip:
             return m
   
   def getMacFromIface(self, _iface):
