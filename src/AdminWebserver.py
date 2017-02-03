@@ -77,7 +77,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
           c['name'] = client.name
           c['ip'] = client.ip
           c['device'] = self.server.app.guessr.get_device(mac)
-          status['aps'][key]['clients'][mac] = client.bssid
+          c['ssl'] = client.ssl
           c['inactivity'] = int( time.time() - client.last_activity)
           status['aps'][key]['clients'][mac] = c
         

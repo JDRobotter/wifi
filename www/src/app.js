@@ -199,6 +199,7 @@ function AppController($http, $scope, $mdDialog) {
     }
     else if(name == 'soundcloud') {
       return {"type":"md-icon","src":"assets/soundcloud.svg"}
+    }
     else if(name == 'Python-urllib') {
       return {"type":"md-icon","src":"assets/Python.svg"}
     }
