@@ -264,24 +264,37 @@ function AppController($http, $scope, $mdDialog) {
         });
 
         $scope.nclients = nclients;
+        if(!break_refresh_loop) {
+          setTimeout($scope.refresh, refresh_timeout_ms);
+        }
       },
       function errorCallback(response) {
         console.log(response);
+        if(!break_refresh_loop) {
+          setTimeout($scope.refresh, refresh_timeout_ms);
+        }
       });
-
-    $http.get('/api/query?q=all&n=50').then(response => {
-        console.log("up");
-        $scope.requests = response.data;
-      },
-      function errorCallback(response) {
-        console.log(response);
-    });
-
-    if(!break_refresh_loop) {
-      setTimeout($scope.refresh, refresh_timeout_ms);
-    }
   }
+  
+  $scope.refresh_query = function() {
+    $http.get('/api/query?q=all&n=50').then(response => {
+      console.log("up");
+      $scope.requests = response.data;
+      if(!break_refresh_loop) {
+        setTimeout($scope.refresh_query, refresh_timeout_ms);
+      }
+    },
+    function errorCallback(response) {
+      console.log(response);
+      if(!break_refresh_loop) {
+        setTimeout($scope.refresh_query, refresh_timeout_ms);
+      }
+    });
+  }
+  
   $scope.refresh();
+  $scope.refresh_query();
+
 }
 
 function ShowRequestDetailsController($scope, $mdDialog, request) {

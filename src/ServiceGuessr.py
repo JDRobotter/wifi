@@ -61,7 +61,7 @@ class ServiceGuessr:
 
     m = re.match(r'.*soundcloud.com$',host)
     if m is not None:
-      self.register_service(client, "app", "soundlcoud", '', '')
+      self.register_service(client, "app", "soundcloud", '', '')
       return
 
     if host in ('api.leparisien.fr'):
