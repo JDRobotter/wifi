@@ -104,7 +104,7 @@ class VirtualInterface(Thread):
         if v != self:
           if v.get_client(client.bssid) is not None:
             v.unregister_client(client)
-      smb = SambaCrawler(self.karma, client.ip, 'smb_%s'%client.bssid)
+      smb = SambaCrawler(self.karma, client, 'smb_%s'%client.bssid)
       smb.start()
       if self.karma.scan:
         try:

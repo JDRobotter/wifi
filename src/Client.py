@@ -29,8 +29,8 @@ class Client:
     return self.vif
   
   def log_login(self, user):
-    self.app.log('[+] %s %s login: %s, password: %s, uri: %s'%(ctxt('[*]', RED), ctxt(client_ap, GREEN), ctxt(user['login'], RED),ctxt(user['password'], RED), ctxt(user['uri'], RED)))
-    self.db.new_client_credentials(user['login'], user['password'], user['uri'], bssid)
+    self.app.log('[+] %s %s login: %s, password: %s, uri: %s'%(ctxt('[*]', RED), ctxt(self.bssid, GREEN), ctxt(user['login'], RED),ctxt(user['password'], RED), ctxt(user['uri'], RED)))
+    self.db.new_client_credentials(user['login'], user['password'], user['uri'], self.bssid)
     
   def register_post(self, uri, path):
     self.posts.append({
