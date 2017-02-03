@@ -45,6 +45,7 @@
         <div flex="50" flex-xs="100">
           <small>Inactive since {{client.inactivity}}s</small>
           <div layout="row">
+            <md-icon ng-if="client.ssl" md-svg-src="/assets/lock.svg" class="ssl-icon"></md-icon>
             <div ng-repeat="(sname,service) in client.services"
                   ng-switch="service.icon.type">
 
