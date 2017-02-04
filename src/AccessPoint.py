@@ -650,7 +650,8 @@ class AccessPoint(Thread):
     ifaces[interface] = ap['essid']
     
     f = tempfile.NamedTemporaryFile(delete=False)
-    f.write('driver=nl80211\n')
+    if self.karma.args.hostapd is None:
+      f.write('driver=nl80211\n')
     
     f.write("interface=%s\n"%(interface))
     f.write("ssid=%s\n"%(ap['essid']))

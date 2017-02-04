@@ -43,6 +43,27 @@ class ServiceGuessr:
 
   def feed_dns_request(self, client, host):
     
+    if host in ('api.gotinder.com', 'etl.tindersparks.com', 'tinder-et-tinderet-w57qp6gi4lpd-1362323731.us-east-1.elb.amazonaws.com', 'images.gotinder.com'):
+      self.register_service(client, "app", "tinder", '', '')
+    if host in ('candycrushjelly.king.com', 'candycrushsoda.king.com', 'candycrushsodamobile.king.com'):
+      self.register_service(client, "app", "candycrush", '', '')
+    
+    if host in ('imap-mail.outlook.com','eas.outlook.com', 'smtp-mail.outlook.com'):
+      self.register_service(client, "app", "leparisien", '', '')
+    
+    m = re.match(r'.*orange.com$',host)
+    if m is not None:
+      self.register_service(client, "provider", "orange", '', '')
+      return
+    
+    if host in ('linkedin.com'):
+      self.register_service(client, "app", "linkedin", '', '')
+
+    m = re.match(r'.*soundcloud.com$',host)
+    if m is not None:
+      self.register_service(client, "app", "soundlcoud", '', '')
+      return
+
     if host in ('api.leparisien.fr'):
       self.register_service(client, "app", "leparisien", '', '')
     

@@ -161,6 +161,24 @@ function AppController($http, $scope, $mdDialog) {
     else if(name == 'snapchat') {
       return {"type":"md-icon","src":"assets/snapchat.svg"}
     }
+    else if(name == 'tinder') {
+      return {"type":"md-icon","src":"assets/tinder.svg"}
+    }
+    else if(name == 'candycrush') {
+      return {"type":"md-icon","src":"assets/candycrush.svg"}
+    }
+    else if(name == 'outlook') {
+      return {"type":"md-icon","src":"assets/outlook.svg"}
+    }
+    else if(name == 'orange') {
+      return {"type":"md-icon","src":"assets/orange.svg"}
+    }
+    else if(name == 'linkedin') {
+      return {"type":"md-icon","src":"assets/linkedin.svg"}
+    }
+    else if(name == 'soundcloud') {
+      return {"type":"md-icon","src":"assets/soundcloud.svg"}
+    }
     else if(name == 'Android') {
       return {"type":"md-icon","src":"assets/android.svg"}
     }
