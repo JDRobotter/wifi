@@ -100,6 +100,10 @@ class VirtualInterface(Thread):
     self.clients.pop(client)
   
   def client_connected(self, client):
+      for name, v in self.ap.virtuals.iteritems():
+        if v != self:
+          if v.get_client(client.bssid) is not None:
+            v.unregister_client(client)
       smb = SambaCrawler(self.karma, client.ip, 'smb_%s'%client.bssid)
       smb.start()
       if self.karma.scan:
