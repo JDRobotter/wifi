@@ -362,7 +362,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     except Exception as e:
       print e
     uri = "%s://%s"%(self.server.PRE.lower(),fullpath)
-    client.register_service_request(self.server.PRE, 'POST', uri, '', self.headers_to_text(), False)
+    client.register_service_request(self.server.PRE, 'GET', uri, '', self.headers_to_text(), False)
 
   def do_POST(self):
     ip = self.client_address[0]
