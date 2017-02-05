@@ -123,11 +123,8 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     if host is None:
       host = ''
     fullpath =  "%s%s"%(host,self.path)
-    essid = ""
-    try:
-      essid = self.server.app.get_client_ap(client).get_essid()
-    except:
-      pass
+
+    essid = client.vif.essid
 
     protocol = ctxt(self.server.PRE,BLUE)
     if self.server.PRE == 'HTTPS':
@@ -223,8 +220,6 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def logphishing():
       self.server.app.log("(%s)"%ctxt("phishing",YELLOW))
-
-    
 
     faked = True
     try:
