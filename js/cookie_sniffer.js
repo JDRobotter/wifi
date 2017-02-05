@@ -1,7 +1,6 @@
 /*
 <html><head></head>
 <body>
-<p>Hey</p>
 <script>
 // */
 var domains = [
@@ -527,7 +526,6 @@ function add_iframe(host) {
 for (i in domains) {
   var dom = domains[i];
   add_iframe(dom);
-  console.log(dom);
 }
 
 </script>
