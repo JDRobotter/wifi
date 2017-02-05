@@ -1,0 +1,54 @@
+<md-dialog aria-label="Change SSID">
+<!--ng-controller="ShowRequestDetailsController as ctrl">-->
+  <form ng-cloak>
+
+    <!--
+    <md-toolbar>
+      <div class="md-toolbar-tools">
+        <h2>Set new SSID</h2>
+        <span flex></span>
+        <md-button class="md-icon-button" ng-click="cancel()">
+          <i class="material-icons">close</i>
+        </md-button>
+      </div>
+    </md-toolbar>
+-->
+		<md-dialog-content>
+      <md-list>
+        <md-list-item>
+          <span>{{request.service_name}} {{request.service_request}}</span>
+        </md-list-item>
+
+        <md-list-item class="md-2-line" ng-if="request.service_uri">
+          <div class="md-list-item-text" layout="column">
+            <p>URI</p>
+            <p><pre>{{request.service_uri}}</pre></p>
+          </div>
+        </md-list-item>
+
+        <md-list-item class="md-2-line" ng-if="request.service_header">
+          <div class="md-list-item-text" layout="column">
+            <p>HEADER</p>
+            <p><pre>{{request.service_header}}</pre></p>
+          </div>
+        </md-list-item>
+
+         <md-list-item class="md-2-line" ng-if="request.service_params">
+          <div class="md-list-item-text" layout="column">
+            <p>PARAMS</p>
+            <p><pre>{{request.service_params}}</pre></p>
+          </div>
+        </md-list-item>
+       
+      </md-list>
+		</md-dialog-content>
+
+    <md-dialog-actions layout="row">
+      <span flex></span>
+      <md-button ng-click="cancel()" >
+        Cancel
+      </md-button>
+    </md-dialog-actions>
+
+	</form>
+</md-dialog>

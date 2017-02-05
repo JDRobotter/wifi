@@ -22,8 +22,29 @@ function AppController($http, $scope, $mdDialog) {
     smb: true,
   };
 
+  $scope.showRequestDetailsDialog = function(ev, request) {
+    console.log(ev);
+    console.log(request);
+    $mdDialog.show({
+      controller: ShowRequestDetailsController,
+      templateUrl: 'templates/show_request.html',
+      parent: angular.element(document.body),
+      targetEvent: ev,
+      clickOutsideToClose: true,
+      locals: {
+        request : request
+      }
+    })
+    .then(function(answer) {
+      // XXX TBD
+    }, function() {
+      // XXX TBD
+    });
+  };
+
 	$scope.changeSSID = function(ev) {
-	}
+	};
+
   $scope.showChangeSSIDDialog = function(ev) {
     $mdDialog.show({
       controller: ChangeSSIDDialogController,
@@ -261,6 +282,18 @@ function AppController($http, $scope, $mdDialog) {
     }
   }
   $scope.refresh();
+}
+
+function ShowRequestDetailsController($scope, $mdDialog, request) {
+  $scope.request = request;
+
+  $scope.hide = function() {
+    $mdDialog.hide();
+  };
+
+  $scope.cancel = function() {
+    $mdDialog.cancel();
+  };
 }
 
 function ChangeSSIDDialogController($scope, $mdDialog) {

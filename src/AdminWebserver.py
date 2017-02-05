@@ -158,19 +158,6 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     obj = db.fetch_last_requests('all',num)
 
     self._send_json(obj)
-
-  def create(self, ap):
-    data = json.loads(ap,strict=False)
-    wpa = None
-    if data.has_key('wpa') and data['wpa'] != "":
-      wpa = data['wpa']
-    iface = self.server.app.ifhostapds.get_one()
-    self.server.app.create_ap(iface, [data['essid']], None, data['timeout'], wpa)
-    
-  def delete(self, ap):
-    data = json.loads(ap,strict=False)
-    essid = data['essid']
-    self.server.app.aps[essid].timeout = 0
   
   def do_POST(self):
     path,params,args = self._parse_url()
@@ -181,11 +168,15 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     length = int(self.headers['Content-Length'])
     post = self.rfile.read(length)
     post = post.decode('string-escape').strip('"')
-    if len(args) == 1 and args[0] == 'create.json':
-      return self.create(post)
-    if len(args) == 1 and args[0] == 'delete.json':
-      return self.delete(post)
+    if args[0] == 'api':
+      data = json.loads(post, strict=False)
+      if len(args) == 2 and args[1] == 'set_ssid':
+        pass
   
+    # failure
+    self.send_response(400)
+    self.end_headers()
+
   def do_GET(self):
     path,params,args = self._parse_url()
     dparams = {} if params is None else urlparse.parse_qs(params)

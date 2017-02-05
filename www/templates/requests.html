@@ -15,10 +15,12 @@
       >
       <div flex layout="row"
         >
+        <md-button ng-click="showRequestDetailsDialog($event,request)">
         <md-icon class="request-icon-avatar"
           ng-style='{"background-color":"{{getColorFromRequest(request)}}"}'>
           {{getIconFromRequest(request)}}
         </md-icon>
+        </md-button>
         <div class="md-list-item-text" layout="column" flex>
           <h3><b
                ng-style='{"color":"{{getColorFromRequest(request)}}"}'>
