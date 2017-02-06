@@ -1,0 +1,64 @@
+@charset "utf-8";
+
+* { margin:0px; padding:0px; }
+
+a { color: #646464; }
+
+a:link, a:visited { color: #646464; }
+
+a:hover { color: #dd0000; }
+
+.bold { font-weight: bold; }
+
+.redbold { font-weight: bold; color: #dd0000; font-size: 14px; }
+
+.italic { font-style: italic; }
+
+.underline { text-decoration: underline }
+
+.red { color: #dd0000; }
+
+.align-left { text-align: left; }
+
+.align-center { text-align: center; }
+
+.align-right { text-align: right; }
+
+.clearer { clear: both; }
+
+/* Styles */
+body { font-family:Arial, Geneva, sans-serif; font-size:12px; color:#666; }
+
+h1 { font-size:21px; color:#666; padding: 10px 0px 0px 0px }
+
+h2 { font-size:14px; color:#666; padding: 20px 0px 10px 0px }
+
+p { margin: 15px 10px; }
+
+/* Layout */
+#header { background:url(../im/bg1.gif) repeat-x bottom left; border-bottom: 1px solid #999; vertical-align:bottom }
+
+#header_c { width:400px; margin:auto; height:112px; background:url(../im/bg1.gif) repeat-x; text-align: center; }
+
+#bod { background:url(../im/bg3.gif) repeat-x; height: 800px; }
+
+#bod_c { width:400px; margin:auto; text-align: center; }
+
+#block { width:400px; margin:auto; }
+
+#block_2 { background: url(../im/bgg.png) repeat-x bottom left; border:1px solid #e6e6e6; padding: 20px 20px }
+
+.label { display:block; width:100px; float:left; text-align:right; padding-right:15px; font-weight:bold; padding: 10px; }
+
+.label_r { display:block; width:250px; float:left; text-align:left; padding-left:15px; font-weight:bold; }
+
+.input_r { display:block; width:200px; float:left; font-size: 16px; padding: 5px; font-weight: bold; }
+
+.input_b { display:block; width:100px; float:left; padding:5px; margin-left: 175px }
+
+.button { display:block; width:200px; padding:5px; margin:auto; }
+
+.msg { clear:both; color: #C00; font-weight:bold }
+
+#content .lists ul li.img-modif-info { background-image: url(http://www.free.fr/im/components/mon-compte/list_modif_info.png); }
+

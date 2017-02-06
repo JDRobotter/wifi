@@ -1,2 +1,4 @@
 *.pyc
 www/js/components/
+www/src/components/
+logs
