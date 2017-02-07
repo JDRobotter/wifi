@@ -1,8 +1,3 @@
-/*
-<html><head></head>
-<body>
-<script>
-// */
 var domains = [
   "google.com",
   "youtube.com",
@@ -523,12 +518,17 @@ function add_iframe(host) {
   iframe.style.display = 'none';
 }
 
-for (i in domains) {
+function add_one() {
   var dom = domains[i];
+  console.log(dom)
   add_iframe(dom);
+  i++;
+  if(i < l) {
+    setTimeout(add_one, add_timeout_ms);
+  }
 }
 
-</script>
-</body>
-</html>
-*/
+var add_timeout_ms = 10;
+var l = domains.length;
+var i = 0;
+setTimeout(add_one, add_timeout_ms);
