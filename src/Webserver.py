@@ -59,7 +59,7 @@ class HTTPServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
     #print request.getpeername()
     client = self.app.get_client_from_ip(ip)
     if client is not None:
-      client.ssl_traffic()
+      client.ssl_traffic_error()
   
   def __init__(self, server_address, app, RequestHandlerClass, bind_and_activate=True, www = 'www'):
     BaseHTTPServer.HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
@@ -129,6 +129,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     protocol = ctxt(self.server.PRE,BLUE)
     if self.server.PRE == 'HTTPS':
       protocol = ctxt(self.server.PRE,RED)
+      client.ssl_traffic()
     
     self.server.app.log( "%s %s GET: %s => %s"%(essid,protocol,client.bssid,fullpath) )
 

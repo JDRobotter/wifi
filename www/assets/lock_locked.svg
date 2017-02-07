@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="217.81886"
+   height="310.38968"
+   id="svg3493"
+   version="1.1"
+   inkscape:version="0.48.0 r9654"
+   sodipodi:docname="Icon - Padlock - Monochrome.svg">
+  <title
+     id="title3514">Padlock (Monochrome; Icon)</title>
+  <defs
+     id="defs3" />
+  <sodipodi:namedview
+     inkscape:document-units="mm"
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.4"
+     inkscape:cx="5.743645"
+     inkscape:cy="197.16921"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:window-width="1024"
+     inkscape:window-height="719"
+     inkscape:window-x="-4"
+     inkscape:window-y="-4"
+     inkscape:window-maximized="1"
+     borderlayer="true" />
+  <metadata
+     id="metadata4">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title>Padlock (Monochrome; Icon)</dc:title>
+        <dc:date>2011-01-05</dc:date>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Urs Roesch</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <cc:license
+           rdf:resource="http://creativecommons.org/licenses/publicdomain/" />
+        <dc:rights>
+          <cc:Agent>
+            <dc:title>Public Domain</dc:title>
+          </cc:Agent>
+        </dc:rights>
+        <dc:publisher>
+          <cc:Agent>
+            <dc:title>OpenClipart</dc:title>
+          </cc:Agent>
+        </dc:publisher>
+        <dc:subject>
+          <rdf:Bag>
+            <rdf:li>Padlock</rdf:li>
+            <rdf:li>Lock</rdf:li>
+            <rdf:li>Icon</rdf:li>
+            <rdf:li>Monochrome</rdf:li>
+            <rdf:li>Black &amp; White</rdf:li>
+            <rdf:li>Symbol</rdf:li>
+          </rdf:Bag>
+        </dc:subject>
+        <dc:description>Monochrome padlock icon</dc:description>
+      </cc:Work>
+      <cc:License
+         rdf:about="http://creativecommons.org/licenses/publicdomain/">
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Reproduction" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Distribution" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#DerivativeWorks" />
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-202.3278,-163.72864)">
+    <g
+       id="g3353"
+       transform="translate(-1347.9697,-1331.7072)">
+      <path
+         id="path3355"
+         d="m 1659.3438,1495.5 c -0.9683,0.01 -1.9372,0.021 -2.9063,0.062 -44.496,0.284 -84.418,39.8534 -84.5313,84.4687 -0.5035,10.5173 0.1466,21.0422 0.031,31.5626 -7.1458,-10e-5 -14.2917,-10e-5 -21.4375,0 0.5678,46.2263 -1.1556,92.5595 0.9062,138.7187 4.4359,29.7237 31.126,56.6032 62.25,55.1563 34.0779,-0.066 68.2622,1.0541 102.2813,-0.6876 31.9335,-5.5024 54.3592,-38.2927 51.9375,-70.0312 0.3669,-41.0408 -0.035,-82.0834 0.125,-123.125 -7.1142,-0.1818 -14.2302,0.139 -21.3438,-0.094 0.5401,-24.9901 1.715,-52.3066 -12.5312,-73.9687 -15.4057,-25.7055 -44.767,-42.255 -74.7812,-42.0625 z m 0.4062,35.6875 c 25.2812,0.3463 50.2589,21.2831 49.5312,47.625 0.5019,10.9218 0.8363,21.8503 1.0626,32.7813 -34.0106,-0.02 -68.021,0.053 -102.0313,-0.063 0.1057,-17.0978 -4.4827,-35.7927 4.875,-51.1874 8.4966,-16.3109 25.4796,-28.7926 44.125,-29.125 0.8153,-0.032 1.622,-0.043 2.4375,-0.031 z"
+         style="opacity:0.98000004;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+         inkscape:connector-curvature="0" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path3357"
+         d="m 1657.1459,1501.5419 c -44.1297,1.1108 -79.3125,37.031 -79.3125,81.4375 l 0,34.625 -21.3437,0 0,117.75 0.031,0 c -0.031,0.8505 -0.031,1.7033 -0.031,2.5625 0,34.1971 25.0513,61.7188 56.1874,61.7188 l 93.0938,0 c 31.1363,0 56.2188,-27.5217 56.2188,-61.7188 0,-0.859 -0.032,-1.7123 -0.063,-2.5625 l 0.063,0 0,-117.75 -21.3126,0 0,-34.625 c 0,-45.1114 -36.2948,-81.4375 -81.4062,-81.4375 -0.7049,0 -1.4245,-0.018 -2.125,0 z m -0.375,23.75 c 0.5355,-0.013 1.0865,0 1.625,0 25.7897,-0.6025 51.1388,18.477 56.4062,43.8125 0.8967,16.1656 1.4017,32.3188 1.6876,48.5 l -114.3126,0 c -0.027,-7.7372 -0.063,-15.4558 -0.2187,-23.1875 -6.5279,-33.085 21.0746,-68.3317 54.8125,-69.125 z m 2.375,135.375 c 1.2168,0 2.4472,0.095 3.6875,0.2812 13.2304,1.9847 22.3595,14.301 20.375,27.5313 -0.9138,6.092 -4.0565,11.3341 -8.4375,15 l 8.4688,53.0937 -23.8438,0 -0.3438,0 -23.8124,0 8.4374,-53.0937 c -6.2414,-5.2417 -9.7038,-13.5365 -8.4062,-22.1875 1.7986,-11.9899 12.1125,-20.593 23.875,-20.625 z"
+         style="opacity:0.98000004;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+    </g>
+  </g>
+</svg>
