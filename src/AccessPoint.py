@@ -97,7 +97,10 @@ class VirtualInterface(Thread):
     
   def unregister_client(self, client):
     client.disconnected()
-    self.clients.pop(client)
+    try:
+      self.clients.pop(client)
+    except:
+      self.karma.log( "%s Unable to pop %s from %s"%(ctxt("[!]",RED), client.bssid, self.essid) )
   
   def client_connected(self, client):
       for name, v in self.ap.virtuals.iteritems():

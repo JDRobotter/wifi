@@ -1,6 +1,8 @@
 CERTFILE='./cert.pem'
 KEYFILE='./key.pem'
 
+from threading import Lock
+
 from src.SambaCrawler import *
 from src.POP3Server import *
 from src.FTPServer import *
@@ -14,22 +16,15 @@ from src.Utils import *
 from src.AdminWebserver import *
 
 import sys
-log_lock = Lock()
-logfile = None
-def log(message):
-  with log_lock:
-    message="%s  %s"%(time.strftime("%H:%M:%S"), message)
-    print message
-    if logfile is not None:
-      message="%s  %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
-      logfile.write("%s\n"%message)
-      logfile.flush()
-    sys.stdout.flush()
 
 class Karma2(Thread):
 
-  def __init__(self, args):
+  def __init__(self, args, logpath = None):
     Thread.__init__(self)
+    self.logfile = None
+    self.log_lock = Lock()
+    if logpath is not None:
+      self.logfile = open(logpath, 'w')
     self.probes_queue = []
     self.logpath = args.logpath
     if not os.path.exists(self.logpath):
@@ -103,7 +98,14 @@ class Karma2(Thread):
     return p.stdout.read().strip('\n').strip()
 
   def log(self, message):
-    log(message)
+    with self.log_lock:
+      message="%s  %s"%(time.strftime("%H:%M:%S"), message)
+      print message
+      if self.logfile is not None:
+        message="%s  %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
+        self.logfile.write("%s\n"%message)
+        self.logfile.flush()
+      sys.stdout.flush()
   
   def get_client_ap(self,ip):
     for iface,ap in self.aps.iteritems():
@@ -137,7 +139,7 @@ class Karma2(Thread):
       req.add_header('Content-Type', 'application/json')
       response = urllib2.urlopen(req, json.dumps(login, ensure_ascii=False))
     except:
-      log( "could not update login")
+      self.log( "could not update login")
 
     if self.uri is None:
       return
@@ -146,15 +148,15 @@ class Karma2(Thread):
       req.add_header('Content-Type', 'application/json')
       response = urllib2.urlopen(req, json.dumps(dns, ensure_ascii=False))
     except:
-      log( "could not update dns")
+      self.log( "could not update dns")
   
   def start_metasploit(self, console):
-    log( "[+] Starting metasploit")
+    self.log( "[+] Starting metasploit")
     cmd = [console,'-r', 'run_fake_services.rb']
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
 
   def clear_iptables(self):
-    log( "[+] Clearing iptables rules")
+    self.log( "[+] Clearing iptables rules")
     cmd = ['iptables','-F']
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     p.wait()
@@ -164,7 +166,7 @@ class Karma2(Thread):
     p.wait()
 
   def setup_nat(self, iface):
-    log( "[+] Setting up NAT on %s"%iface)
+    self.log( "[+] Setting up NAT on %s"%iface)
     cmd = ["iptables", 
       "-t","nat",
       "-A","POSTROUTING",
@@ -175,7 +177,7 @@ class Karma2(Thread):
 
   def get_unique_subnet(self):
     a = self.subnets.pop()
-    return IPSubnet("10.0.%d.%%d"%a)
+    return IPSubnet("10.0.%d.%%s"%a)
 
   def free_subnet(self, subnet):
     self.subnets.add(subnet.base)
@@ -239,7 +241,7 @@ class Karma2(Thread):
       ap.daemon = True
       ap.start()
     else:
-      log("Too many ap %s to create for this interface %s"%(len(essid), iface.str()))
+      self.log("Too many ap %s to create for this interface %s"%(len(essid), iface.str()))
 
   def process_probe(self, essid, bssid = None):
     keep = True
@@ -258,6 +260,13 @@ class Karma2(Thread):
   
   def stop(self):
     self.running = False
+  
+  def flush(self):
+    if self.logfile is not None:
+      with self.log_lock:
+        l = self.logfile
+        self.logfile = None
+        l.close()
   
   def run(self):
     self.running = True
@@ -324,13 +333,13 @@ class Karma2(Thread):
                 if not p['bssid'] in self.ignore_bssid:
                   self.process_probe(p['essid'], bssid)
           except Exception as e:
-            log( "Probes %s"%e)
+            self.log( "Probes %s"%e)
             try:
               f = open("/tmp/wifi-probes.json", 'w')
               f.write(data)
               f.close()
             except Exception as e:
-              log("probes backup %s"%e)
+              self.log("probes backup %s"%e)
           time.sleep(0.5)
       else:
         def _filter(packet):

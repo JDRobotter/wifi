@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import os
-from threading import Lock,Thread
 import time,re,tempfile
 import subprocess
 from scapy.all import *
@@ -13,6 +12,14 @@ sys.path.insert(0,"./impacket/")
 
 from src.Utils import *
 from src.Karma2 import *
+
+km = None
+
+def log(message):
+  if km is not None:
+    km.log(message)
+  else:
+    print message
 
 #CERTFILE='./certs/fullchain.pem'
 #KEYFILE='./certs/privkey.pem'
@@ -94,7 +101,7 @@ if __name__ == '__main__':
     args.logpath = os.path.join(args.logpath,str(random.randint(0,1e16)))
     if not os.path.exists(args.logpath):
       os.mkdir(args.logpath)
-    logfile = open(os.path.join(args.logpath, 'wifis.log'), 'w')
+    logpath = os.path.join(args.logpath, 'wifis.log')
     
     sl = './logs/lastlog'
     if os.path.exists(sl) or os.path.islink(sl):
@@ -117,7 +124,7 @@ if __name__ == '__main__':
     if args.virtual is not None:
       args.virtual = int(args.virtual)
     
-    km = Karma2(args)
+    km = Karma2(args, logpath)
     
     signal.signal(signal.SIGUSR1, km.status)
     signal.signal(signal.SIGUSR2, km.status)
@@ -193,9 +200,6 @@ if __name__ == '__main__':
       p.wait()
     #need to be changed to wait for all threads
     time.sleep(2)
-    if logfile is not None:
-      with log_lock:
-        l = logfile
-        logfile = None
-        l.close()
+    
+    km.flush()
 
