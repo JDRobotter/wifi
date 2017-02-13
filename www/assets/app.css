@@ -70,3 +70,8 @@
   margin-left: 0px;
   border-radius: 50%;
 }
+
+#log_terminal {
+ background-color:black;
+ color:white;
+}

@@ -53,19 +53,20 @@ class HTTPServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
   allow_reuse_address = True
   daemon_threads = True
   
-  def handle_error(self, request, client_address):
-    ip = client_address[0]
-    self.app.log("[%s] error handling %s from %s"%(ctxt("x",RED), request, ip))
-    #print request.getpeername()
-    client = self.app.get_client_from_ip(ip)
-    if client is not None:
-      client.ssl_traffic_error()
+  #def handle_error(self, request, client_address):
+    #ip = client_address[0]
+    #self.app.log("[%s] error handling %s from %s"%(ctxt("x",RED), request, ip))
+    ##print request.getpeername()
+    #client = self.app.get_client_from_ip(ip)
+    #if client is not None:
+      #client.ssl_traffic_error()
   
   def __init__(self, server_address, app, RequestHandlerClass, bind_and_activate=True, www = 'www'):
     BaseHTTPServer.HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
     self.app = app
     self.PRE = ''
     self.www_directory = www
+    self.logfile = None
 
 class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
   

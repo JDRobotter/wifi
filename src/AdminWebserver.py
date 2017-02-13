@@ -50,6 +50,18 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     except Exception as e:
       raise
     
+    
+  def _get_logs(self, full = False):
+    if full:
+      if self.server.logfile is not None:
+        self.server.logfile.close()
+      self.server.logfile = open(self.server.app.logfile.name, 'r')
+    content = []
+    if self.server.logfile is not None:
+      content = self.server.logfile.readlines()
+    return self._send_json(content)
+  
+  
   def _get_status(self):
 
     status = {}
@@ -206,6 +218,11 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
         return self._get_version()
       elif len(args) == 3 and args[1] == 'request':
         return self._get_request(args[2])
+      elif len(args) == 2 and args[1] == 'logs':
+        full = False
+        if params is not None:
+          full = True
+        return self._get_logs(full)
       else:
         self.send_response(400)
         self.end_headers()

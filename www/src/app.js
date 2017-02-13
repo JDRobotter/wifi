@@ -1,5 +1,5 @@
 
-function AppController($http, $scope, $mdDialog) {
+function AppController($http, $scope, $mdDialog, $sce, ansi2html) {
   var self = this;
 
   var refresh_timeout_ms = 2000;
@@ -7,6 +7,8 @@ function AppController($http, $scope, $mdDialog) {
 
   break_refresh_loop = false;
 
+  
+  $scope.logs = [];
   $scope.server_version = ''
   $http.get('/api/version').then(response => {
     $scope.server_version = response.data.version;
@@ -240,6 +242,10 @@ function AppController($http, $scope, $mdDialog) {
       return {"type":"i","src":"help"}
     }
   }
+  
+  $scope.colorize = function (text) {
+    return $sce.trustAsHtml(ansi2html.toHtml(text));
+  }
  
   $scope.refresh = function() {
 
@@ -295,8 +301,34 @@ function AppController($http, $scope, $mdDialog) {
     });
   }
   
+  
+  $scope.refresh_logs = function(full) {
+    
+    var uri = '/api/logs';
+    if(full) {
+      uri += '?full=true';
+    }
+    // fetch status
+    $http.get(uri).then(response => {
+      if(full) {
+        $scope.logs = [];
+      }
+      $scope.logs.push.apply($scope.logs, response.data)
+      if(!break_refresh_loop) {
+        setTimeout($scope.refresh_logs, refresh_timeout_ms);
+      }
+    },
+    function errorCallback(response) {
+      console.log(response);
+      if(!break_refresh_loop) {
+        setTimeout(function() {$scope.refresh_logs(true)}, refresh_timeout_ms);
+      }
+    });
+  }
+  
   $scope.refresh();
   $scope.refresh_query();
+  $scope.refresh_logs(true);
 
 }
 
@@ -326,7 +358,7 @@ function ChangeSSIDDialogController($scope, $mdDialog) {
   };
 }
 
-var app = angular.module( 'starter-app', ['ngMaterial','ui.router'])
+var app = angular.module( 'starter-app', ['ngMaterial','ui.router', 'ansiToHtml'])
   .config(['$stateProvider','$urlRouterProvider', 
     function($stateProvider,$urlRouterProvider) {
 
@@ -352,6 +384,10 @@ var app = angular.module( 'starter-app', ['ngMaterial','ui.router'])
         .state('infos', {
           url:'/infos',
           templateUrl:'templates/infos.html',
+        })
+        .state('logs', {
+          url:'/logs',
+          templateUrl:'templates/logs.html',
         })
     }])
   .config(function($mdThemingProvider) {
