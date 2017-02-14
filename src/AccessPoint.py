@@ -47,6 +47,9 @@ class VirtualInterface(Thread):
       for sport, dport in self.karma.redirections.iteritems():
         self.setup_allow(iface,'tcp',dport)
         self.setup_redirections(iface,sport,dport)
+      
+      for bssid in self.karma.get_ignore_bssid():
+        self.setup_whitelist(iface, bssid)
       self.connectionwatch_process = self.start_connectionwatch(iface)
 
       # block all input packets
@@ -472,6 +475,15 @@ class VirtualInterface(Thread):
       '--dport', str(inport),
       '-j', 'REDIRECT',
       '--to-port', str(outport),
+      ])
+    
+  def setup_whitelist(self, iface, mac):
+    self.setup_iptables([
+      '-A', 'INPUT',
+      '-i', iface,
+      '-m', 'mac',
+      '--mac-source', mac,
+      '-j', 'ACCEPT',
       ])
 
 
