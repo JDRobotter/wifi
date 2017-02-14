@@ -91,4 +91,15 @@ class Client:
   
   def disconnected(self):
     self.app.log( "[-] %s (%s) %s disconnected"%(self.bssid, ctxt(self.ip, GREEN), self.name))
-    
+  
+  def get_data(self):
+    c = {}
+    c['services'] = self.services
+    c['name'] = self.name
+    c['ip'] = self.ip
+    c['bssid'] = self.bssid
+    c['device'] = self.app.guessr.get_device(self.bssid)
+    c['ssl_error'] = self.ssl_error
+    c['credentials'] = self.credentials
+    c['inactivity'] = int( time.time() - self.last_activity)
+    return c;

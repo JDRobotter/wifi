@@ -1,0 +1,33 @@
+<div layout="row" layout-xs="column">
+<div layout="row" flex="50" flex-xs="100">
+  <md-icon class="md-avatar" md-svg-src="{{getIconFromIWInfos(client.iwinfos)}}" ng-if="client.iwinfos !== undefined"></md-icon>
+  <md-icon class="md-avatar md-36">{{getIconFromDevice(client.device)}}</md-icon>
+  <div class="md-list-item-text" layout="column">
+    <h3>{{client.name}}</h3>
+    <h4>{{client.device.brand}} {{client.device.family}}</h4>
+    <p>{{client.ip}} ({{client.bssid}})</p>
+    </div>
+  </div>
+
+  <div flex="50" flex-xs="100">
+    <small>Inactive since {{client.inactivity}}s</small>
+    <div layout="row">
+      <md-icon ng-if="client.ssl" md-svg-src="/assets/lock_unlocked.svg" class="ssl-icon"></md-icon>
+      <md-icon ng-if="client.ssl_error" md-svg-src="/assets/lock_locked.svg" class="ssl-icon"></md-icon>
+      <div ng-repeat="(sname,service) in client.services"
+        ng-switch="service.icon.type">
+
+        <i ng-switch-when="i" class="material-icons md-36">{{service.icon.src}}</i>
+
+        <md-icon ng-switch-when="md-icon" md-svg-src="{{service.icon.src}}" class="service-icon"></md-icon>
+
+        <img ng-switch-when="img" ng-src="{{service.icon.src}}" class="service-icon"/>
+
+        <md-icon ng-switch-default="">android</md-icon>
+        <md-tooltip>
+          {{sname}} {{service.version}} ({{service.type}})
+        </md-tooltip>
+      </div>
+    </div>
+  </div>
+</div>

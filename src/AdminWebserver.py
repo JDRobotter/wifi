@@ -67,6 +67,9 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     status = {}
     status['total_client_count'] = self.server.app.total_client_count
     status['probes_queue'] = self.server.app.probes_queue
+    status['clients'] = []
+    for client in self.server.app.clients:
+      status['clients'].append(client.get_data())
     status['aps'] = {}
     for iface,ap in self.server.app.aps.iteritems():
       for iface, viface in ap.virtuals.iteritems():
@@ -84,15 +87,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
         status['aps'][key]['timeout'] = ap.timeout
         status['aps'][key]['clients'] = {}
         for mac,client in viface.clients.iteritems():
-          c = {}
-          c['services'] = client.services
-          c['name'] = client.name
-          c['ip'] = client.ip
-          c['device'] = self.server.app.guessr.get_device(mac)
-          c['ssl_error'] = client.ssl_error
-          c['credentials'] = client.credentials
-          c['inactivity'] = int( time.time() - client.last_activity)
-          status['aps'][key]['clients'][mac] = c
+          status['aps'][key]['clients'][mac] = client.get_data()
         
     self._send_json(status)
 

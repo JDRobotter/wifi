@@ -94,6 +94,8 @@ class VirtualInterface(Thread):
     self.unused = False
     client = Client(self, mac)
     self.clients[mac] = client
+    # add client to session history
+    self.karma.clients.append(client)
     
   def unregister_client(self, client):
     client.disconnected()

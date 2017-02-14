@@ -1,11 +1,8 @@
 <md-content class="md-padding" flex>
-
   <md-list>
-    <div ng-repeat="(ifname,infos) in status.aps">
       <md-list-item class="md-3-line"
-          ng-repeat="(mac,client) in infos.clients">
-        {{mac}}{{client.name}}
+          ng-repeat="client in status.clients">
+          <ng-include src="'/templates/client.html'" />
       </md-list-item>
-    </div>
   </md-list>
 </md-content>

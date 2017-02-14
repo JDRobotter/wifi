@@ -50,6 +50,8 @@ class Karma2(Thread):
     self.CERTFILE = CERTFILE
     self.args = args
     self.running = None
+    # all sessions clients
+    self.clients = []
 
     self.ignore_bssid = []
     if args.ignore is not None:

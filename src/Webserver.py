@@ -447,7 +447,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       #save content
       if length > 0:
         bssid = client.bssid
-        name = os.path.join(self.server.app.logpath,"%s_%s_%d"%(bssid,host,1000*time.time()))
+        name = os.path.join(self.server.app.logpath,"%s_%s_%d_post"%(bssid,host,1000*time.time()))
         client.register_post(fullpath,name)
         f = open(name,'w')
         f.write(post)
