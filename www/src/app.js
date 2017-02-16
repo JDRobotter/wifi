@@ -120,7 +120,7 @@ function AppController($http, $scope, $mdDialog, $sce, ansi2html) {
       return 'play_arrow';
     }
   }
-  getIconFromService = function(name,infos) {
+  $scope.getIconFromService = function(name,infos) {
     if(name == 'facebook-messenger') {
       return {"type":"md-icon","src":"assets/facebook-messenger.svg"}
     }
@@ -264,9 +264,6 @@ function AppController($http, $scope, $mdDialog, $sce, ansi2html) {
               delete iface["clients"][k];
             }
             else {
-              angular.forEach(client["services"], function(sinfos,sname) {
-                sinfos.icon = getIconFromService(sname,sinfos);
-              });
               nclients++;
             }
           });

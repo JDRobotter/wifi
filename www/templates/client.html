@@ -15,13 +15,12 @@
       <md-icon ng-if="client.ssl" md-svg-src="/assets/lock_unlocked.svg" class="ssl-icon"></md-icon>
       <md-icon ng-if="client.ssl_error" md-svg-src="/assets/lock_locked.svg" class="ssl-icon"></md-icon>
       <div ng-repeat="(sname,service) in client.services"
-        ng-switch="service.icon.type">
+        ng-switch="getIconFromService(sname,service).type">
+        <i ng-switch-when="i" class="material-icons md-36">{{getIconFromService(sname,service).src}}</i>
 
-        <i ng-switch-when="i" class="material-icons md-36">{{service.icon.src}}</i>
+        <md-icon ng-switch-when="md-icon" md-svg-src="{{getIconFromService(sname,service).src}}" class="service-icon"></md-icon>
 
-        <md-icon ng-switch-when="md-icon" md-svg-src="{{service.icon.src}}" class="service-icon"></md-icon>
-
-        <img ng-switch-when="img" ng-src="{{service.icon.src}}" class="service-icon"/>
+        <img ng-switch-when="img" ng-src="{{getIconFromService(sname,service).src}}" class="service-icon"/>
 
         <md-icon ng-switch-default="">android</md-icon>
         <md-tooltip>
