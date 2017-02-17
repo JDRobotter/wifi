@@ -61,6 +61,9 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       content = self.server.logfile.readlines()
     return self._send_json(content)
   
+  def _get_secure(self, iface,secure):
+    self.server.app.set_secure(iface,secure)
+    return self._send_json({})
   
   def _get_status(self):
 
@@ -75,6 +78,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       for iface, viface in ap.virtuals.iteritems():
         key = viface.iface
         status['aps'][key] = {}
+        status['aps'][key]['secure'] = viface.secure
         status['aps'][key]['ssid'] = viface.essid
         status['aps'][key]['wpa2'] = False
         status['aps'][key]['status'] = ap.status
@@ -190,6 +194,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
 
   def do_GET(self):
     path,params,args = self._parse_url()
+    set_title('ws %s'%path)
     dparams = {} if params is None else urlparse.parse_qs(params)
     if ('..' in args) or ('.' in args):
       self.send_response(400)
@@ -197,7 +202,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
       return
     if len(args) == 1 and args[0] == '':
       path = 'index.html'
-
+    
     elif args[0] == 'api':
       if len(args) == 2 and args[1] == 'query':
         if 'q' in dparams and 'n' in dparams:
@@ -216,6 +221,8 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
         return self._get_version()
       elif len(args) == 3 and args[1] == 'request':
         return self._get_request(args[2])
+      elif len(args) == 2 and args[1] == 'secure':
+        return self._get_secure(dparams['iface'][0],dparams['secure'][0] == 'true')
       elif len(args) == 2 and args[1] == 'logs':
         full = False
         if params is not None:

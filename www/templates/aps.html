@@ -5,8 +5,7 @@
     <md-toolbar class="md-theme-light">
       <div class="md-toolbar-tools">
         <i class="material-icons md-36">wifi_tethering</i>
-				<span><small>{{ifname}} - </small>{{infos.ssid}}</span>
-        <span></span>
+				<span><small>{{ifname}} - </small>{{infos.ssid}}</span><span></span>
 
         <!-- INTERFACE BAR MENU -->
   			<md-menu md-position-mode="target-right target" >
@@ -19,6 +18,16 @@
             <md-menu-item>
 							<md-button ng-click="showChangeSSIDDialog($event)">
 								<p>Change SSID</p>
+							</md-button>
+						</md-menu-item>
+						<md-menu-item ng-if=" ! infos.secure">
+							<md-button ng-click="set_secure(ifname, true)">
+								<p>Securize</p>
+							</md-button>
+						</md-menu-item>
+						<md-menu-item ng-if="infos.secure">
+							<md-button ng-click="set_secure(ifname, false)">
+								<p>UNSecurize</p>
 							</md-button>
 						</md-menu-item>
           </md-menu-content>

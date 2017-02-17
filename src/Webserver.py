@@ -120,6 +120,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       return
     
     path,params,args = self._parse_url()
+    set_title('ws %s'%path)
     host = self.headers.get('Host')
     if host is None:
       host = ''

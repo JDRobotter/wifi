@@ -44,6 +44,14 @@ function AppController($http, $scope, $mdDialog, $sce, ansi2html) {
     });
   };
 
+  $scope.set_secure = function(iface, secure) {
+    $http.get('/api/secure?iface='+iface+'&secure='+secure).then(response => {
+    },
+    function errorCallback(response) {
+      console.log(response);
+    }); 
+  }
+  
 	$scope.changeSSID = function(ev) {
 	};
 

@@ -14,6 +14,7 @@ class VirtualInterface(Thread):
     Thread.__init__(self)
     self.clients = {}
     self.ap = ap
+    self.secure = False
     self.bssid = bssid
     self.karma = ap.karma
     self.iface = iface
@@ -39,21 +40,21 @@ class VirtualInterface(Thread):
 
     if fishing:
       # allow DNS
-      self.setup_allow(iface, 'udp', 53)
-      self.setup_allow(iface, 'tcp', 53)
+      self.setup_allow('udp', 53)
+      self.setup_allow('tcp', 53)
       # allow DHCP
-      self.setup_allow(iface, 'udp', 67)
+      self.setup_allow('udp', 67)
       # redirect the following ports
       for sport, dport in self.karma.redirections.iteritems():
-        self.setup_allow(iface,'tcp',dport)
-        self.setup_redirections(iface,sport,dport)
+        self.setup_allow('tcp',dport)
+        self.setup_redirections(sport,dport)
       
       for bssid in self.karma.get_ignore_bssid():
-        self.setup_whitelist(iface, bssid)
+        self.setup_whitelist(bssid)
       self.connectionwatch_process = self.start_connectionwatch(iface)
 
       # block all input packets
-      self.setup_block_all(iface)
+      self.setup_block_all()
 
     else:
       self.connectionwatch_process = None
@@ -416,60 +417,76 @@ class VirtualInterface(Thread):
     p.wait()
     return p
 
-  def setup_block_all(self, iface):
+  def secure_network(self, secure = True):
+    if not secure:
+      self.karma.log( "%s switching %s to unsecure mode"%(ctxt("[!]",YELLOW), ctxt(self.iface,GREEN)) )
+    self.secure = secure
+    rule = 'DROP'
+    if not secure:
+      rule = 'ACCEPT'
+    
     self.setup_iptables([
       '-A','INPUT',
-      '-i',iface,
+      '-i',self.iface,
+      '-j',rule])
+    
+    self.setup_iptables([
+      '-A','OUTPUT',
+      '-i',self.iface,
+      '-j',rule])
+    
+    self.setup_iptables([
+      '-A','FORWARD',
+      '-i',self.iface,
+        '-j',rule])
+    
+
+  def setup_block_all(self):
+    self.setup_iptables([
+      '-A','INPUT',
+      '-i',self.iface,
       '-m','conntrack',
       '-j','ACCEPT',
       '--ctstate','RELATED,ESTABLISHED',
     ])
     self.setup_iptables([
       '-A','INPUT',
-      '-i',iface,
+      '-i',self.iface,
       '-m','state',
       '--state','ESTABLISHED,RELATED',
       '-j','ACCEPT',
     ])
-    self.setup_iptables([
-      '-A','INPUT',
-      '-i',iface,
-      '-j','DROP'])
+    
     self.setup_iptables([
       '-A','OUTPUT',
-      '-i',iface,
+      '-i',self.iface,
       '-m','state',
       '--state','ESTABLISHED,RELATED',
       '-j','ACCEPT',
     ])
-    self.setup_iptables([
-      '-A','OUTPUT',
-      '-i',iface,
-      '-j','DROP'])
-    self.setup_iptables([
-      '-A','FORWARD',
-      '-i',iface,
-      '-m','state',
-      '--state','ESTABLISHED,RELATED',
-      '-j','ACCEPT',
-    ])
-    self.setup_iptables([
-      '-A','FORWARD',
-      '-i',iface,
-        '-j','DROP'])
 
-  def setup_allow(self, iface, proto, port):
+    self.setup_iptables([
+      '-A','FORWARD',
+      '-i',self.iface,
+      '-m','state',
+      '--state','ESTABLISHED,RELATED',
+      '-j','ACCEPT',
+    ])
+    
+    self.secure_network(True)
+
+  def setup_allow(self, proto, port):
     return self.setup_iptables([
       '-A','INPUT',
-      '-i',iface,
+      '-i',self.iface,
       '-p',proto,
       '--dport',str(port),
       '-j','ACCEPT'])
 
-  def setup_redirections(self, iface, inport, outport):
+  def setup_redirections(self, inport, outport):
     self.setup_iptables([
       '-A', 'PREROUTING',
-      '-i', iface,
+      '-i', self.iface,
       '-t', 'nat',
       '-p', 'tcp',
       '--dport', str(inport),
@@ -477,10 +494,10 @@ class VirtualInterface(Thread):
       '--to-port', str(outport),
       ])
     
-  def setup_whitelist(self, iface, mac):
+  def setup_whitelist(self, mac):
     self.setup_iptables([
       '-A', 'INPUT',
-      '-i', iface,
+      '-i', self.iface,
       '-m', 'mac',
       '--mac-source', mac,
       '-j', 'ACCEPT',

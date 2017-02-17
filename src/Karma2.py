@@ -184,6 +184,12 @@ class Karma2(Thread):
   def free_subnet(self, subnet):
     self.subnets.add(subnet.base)
   
+  def set_secure(self, iface,secure):
+    for i, ap in self.aps.iteritems():
+      for v, vif in ap.virtuals.iteritems():
+        if v == iface:
+          vif.secure_network(secure)
+  
   def get_client_from_ip(self, ip):
     for iface, ap in self.aps.iteritems():
       c = ap.get_client_from_ip(ip)
