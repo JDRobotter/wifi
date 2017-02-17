@@ -49,7 +49,7 @@ class ServiceGuessr:
       self.register_service(client, "app", "candycrush", '', '')
     
     if host in ('imap-mail.outlook.com','eas.outlook.com', 'smtp-mail.outlook.com'):
-      self.register_service(client, "app", "leparisien", '', '')
+      self.register_service(client, "app", "outlook", '', '')
     
     m = re.match(r'.*orange.com$',host)
     if m is not None:
