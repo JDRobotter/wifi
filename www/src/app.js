@@ -127,6 +127,9 @@ function AppController($http, $scope, $mdDialog, $sce, ansi2html) {
     else if(name == 'imap-gmail') {
       return {"type":"md-icon","src":"assets/gmail.svg"}
     }
+    else if(name == 'smb') {
+      return {"type":"md-icon","src":"assets/smb.svg"}
+    }
     else if(name == 'Mobile Safari' || name == 'Safari' || name == 'Mobile Safari UI/WKWebView') {
       return {"type":"md-icon","src":"assets/safari.svg"}
     }
