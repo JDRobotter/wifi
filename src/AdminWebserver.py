@@ -104,6 +104,9 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
 
         # send HTTP OK
         self.send_response(200)
+        self.send_header('Cache-Control','public, max-age=99936000')
+        self.send_header('Expires','Sat, 01 Jul 2055 03:42:00 GMT')
+        #self.send_header('Last-Modified','Tue, 15 Nov 1994 12:30:00 GMT')
         self.end_headers()
 
         # push data
