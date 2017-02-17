@@ -1,4 +1,6 @@
 import os, random
+import re
+import subprocess
 
 DEFAULT = '\033[49m\033[39m'
 RED = '\033[91m'
@@ -54,18 +56,49 @@ class LineReader(object):
   
   
 class WLANInterface:
-  def __init__(self, iface, virtuals):
+  def __init__(self, iface):
     self.iface = iface
     # iw list | grep "valid interface combinations"
-    self.available_ap = virtuals
+    self.available_ap = self.get_availables_ap()
     self.available = True
+    #iw dev wl00e1b0103951 info
+    #iw phy phy3 info
+
+  def get_availables_ap(self):
+    command = ['iw', 'dev', self.iface, 'info']
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process.wait()
+    (stdoutdata, stderrdata) = process.communicate();
+    lines = stdoutdata.splitlines()
+    phy = None
+    for line in lines:
+      m = re.match('.*wiphy (\d+).*', line)
+      if m is not None:
+        phy = m.groups()
+        break
+    if phy is not None:
+      command = ['iw', 'phy', 'phy%s'%phy,'info']
+      process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      process.wait()
+      (stdoutdata, stderrdata) = process.communicate();
+      lines = stdoutdata.splitlines()
+      parse = False
+      for line in lines:
+        if(line.find('valid interface combinations')!=-1):
+          parse = True
+        if parse:
+          m = re.match('.*\*\s.*AP.*=\s(\d+).*', line)
+          if m is not None:
+            return m.groups()[0]
+      return 1
+          
 
   def str(self):
     return self.iface
 
 class WLANInterfaces:
-  def __init__(self, ifs, virtuals):
-    self.ifs = [WLANInterface(_if, virtuals) for _if in ifs]
+  def __init__(self, ifs):
+    self.ifs = [WLANInterface(_if) for _if in ifs]
 
   def get_one(self):
     ifs = filter(lambda iface:iface.available, self.ifs)

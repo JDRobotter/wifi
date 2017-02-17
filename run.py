@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import traceback
 import os
 import time,re,tempfile
 import subprocess
@@ -48,7 +49,7 @@ def parse_args():
     parser.add_argument("-z", "--hostapd", help="hostapd binary path")
     parser.add_argument("-q", "--test", action='store_true', help="run test mode")
     parser.add_argument("-p", "--port", help="admin webserver port")
-    parser.add_argument("-y", "--virtual", help="virtual interfaces count (default is one for each physical device)")
+    parser.add_argument("-y", "--virtuals", help="virtual interfaces count (default is one for each physical device)")
     parser.add_argument('-i', '--ignore', help='ignore bssid ie. -i mac1 mac2 macN', action='append', nargs='*')
     return parser.parse_args()
 
@@ -121,8 +122,8 @@ if __name__ == '__main__':
      forbidden = args.forbidden.split(',')
     args.forbidden = forbidden
     
-    if args.virtual is not None:
-      args.virtual = int(args.virtual)
+    if args.virtuals is not None:
+      args.virtuals = int(args.virtuals)
     
     km = Karma2(args, logpath)
     
@@ -189,8 +190,15 @@ if __name__ == '__main__':
 
   except KeyboardInterrupt:
     pass
+  except Exception as e:
+    print e
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+    traceback.print_exception(exc_type, exc_value, exc_traceback,
+                              limit=2, file=sys.stdout)
   finally:
-    km.stop()
+    if km is not None:
+      km.stop()
     if args.enable is not None:
       log( "[+] Stopping monitor interface %s properly"%args.monitor)
       cmd = ['airmon-ng','stop',args.monitor]
@@ -201,5 +209,6 @@ if __name__ == '__main__':
     #need to be changed to wait for all threads
     time.sleep(2)
     
-    km.flush()
+    if km is not None:
+      km.flush()
 

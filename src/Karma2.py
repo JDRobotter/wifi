@@ -33,10 +33,7 @@ class Karma2(Thread):
     self.wpa = args.wpa
     self.ifmon = args.monitor
     self.ifgw = args.gateway
-    virtual = 1
-    if args.virtual is not None:
-      virtual = args.virtual
-    self.ifhostapds = WLANInterfaces(args.hostapds, virtual)
+    self.ifhostapds = WLANInterfaces(args.hostapds)
     self.aps = {}
     self.subnets = set(xrange(50,256)) 
     self.clear_iptables()
@@ -52,6 +49,9 @@ class Karma2(Thread):
     self.running = None
     # all sessions clients
     self.clients = []
+    
+    for i in self.ifhostapds.ifs:
+      self.log('Using %s with %s virtuals ap'%(ctxt(i.iface, GREEN),ctxt(i.available_ap, GREEN)))
 
     self.ignore_bssid = []
     if args.ignore is not None:
@@ -221,10 +221,12 @@ class Karma2(Thread):
       iface = self.ifhostapds.get_one()
       if iface is None:
         break
-
+      
       # get aps for this ap
-      n = iface.available_ap # not implemented, always 1
-      n = min(n, self.args.virtual)
+      n = iface.available_ap
+      if self.args.virtuals is not None:
+        n = min(n, self.args.virtuals)
+
       maps = aps[:n]
       aps = aps[n:]
       
