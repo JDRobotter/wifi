@@ -160,8 +160,20 @@ if __name__ == '__main__':
         
         aps.append({'bssid': bssid, 'essid': essid, 'wpa': wpa})
       
+      bssid_aps = []
+      nobssid_aps = []
+      for a in aps:
+        if a['bssid'] is None:
+          nobssid_aps.append(a)
+        else:
+          bssid_aps.append(a)
+      
       try:
-        km.create_aps(aps, 60*60*24*365)
+        # as mutliap does not support custom bssid use mono ap mode
+        for ap in bssid_aps:
+          km.create_aps([ap], 60*60*24*365)
+          
+        km.create_aps(nobssid_aps, 60*60*24*365)
       except:
         log("[%s] could not create aps from command line"%ctxt("!", RED))
         
