@@ -2,6 +2,7 @@ CERTFILE='./cert.pem'
 KEYFILE='./key.pem'
 
 from threading import Lock
+import traceback
 
 from src.SambaCrawler import *
 from src.POP3Server import *
@@ -51,7 +52,7 @@ class Karma2(Thread):
     self.clients = []
     
     for i in self.ifhostapds.ifs:
-      self.log('Using %s with %s virtuals ap'%(ctxt(i.iface, GREEN),ctxt(i.available_ap, GREEN)))
+      self.log('Using %s with %s virtuals ap'%(ctxt(i.iface, GREEN),ctxt(str(i.available_ap), GREEN)))
 
     self.ignore_bssid = []
     if args.ignore is not None:
@@ -98,6 +99,13 @@ class Karma2(Thread):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     p.wait()
     return p.stdout.read().strip('\n').strip()
+
+  def log_exception(self, e):
+    self.log("Exception: %s"%ctxt(str(e), RED))
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+    traceback.print_exception(exc_type, exc_value, exc_traceback,
+                              limit=2, file=sys.stdout)
 
   def log(self, message):
     with self.log_lock:

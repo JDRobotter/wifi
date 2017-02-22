@@ -149,7 +149,8 @@ if __name__ == '__main__':
         wpa = None
         
         try:
-          bssid = props[1]
+          if props[1] != 'None':
+            bssid = props[1]
         except:
           pass
         
@@ -174,7 +175,8 @@ if __name__ == '__main__':
           km.create_aps([ap], 60*60*24*365)
           
         km.create_aps(nobssid_aps, 60*60*24*365)
-      except:
+      except Exception as e:
+        km.log_exception(e)
         log("[%s] could not create aps from command line"%ctxt("!", RED))
         
     if not args.test:

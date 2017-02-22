@@ -324,10 +324,7 @@ class VirtualInterface(Thread):
                 v = v.strip(" \t")
                 mac = station.lower()
                 if mac in self.clients:
-                  if self.clients[mac].iwinfos is not None:
-                    self.clients[mac].iwinfos[k] = v
-                  else:
-                    self.clients[mac].iwinfos = {k:v}
+                  self.clients[mac].set_iwinfos(k,v)
 
   def iw_monitoring_is_done(self):
     tbrm = []

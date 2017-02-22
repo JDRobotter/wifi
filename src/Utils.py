@@ -89,7 +89,7 @@ class WLANInterface:
         if parse:
           m = re.match('.*\*\s.*AP.*=\s(\d+).*', line)
           if m is not None:
-            return m.groups()[0]
+            return int(m.groups()[0])
       return 1
           
 
