@@ -466,6 +466,48 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     self.end_headers()
     
     if host == "api.deezer.com" and path == "1.0/gateway.php":
-      deezer = json.loads(post)
-      client.data['deezer'] = deezer
+      deezer = self.parse_deezer_json(json.loads(post))
+      client.set_deezer_infos(deezer)
       
+  def parse_deezer_json(self, data):
+    track_uri = "http://www.deezer.com/track/"
+    playlist_uri = "http://www.deezer.com/playlist/"
+
+    deezer_data = {
+      'song':{},
+      'user':{}
+    }
+    if data.has_key('params'):
+      if data['params']['media']['type'] == 'song':
+        uri ='%s%s'%(track_uri,data['params']['media']['id'])
+        try:
+          response = urllib2.urlopen(uri)
+          html = response.read()
+          res = re.findall('<meta property="og:image" content="(.*)">',html)
+          thumbnail = res[0]
+          
+          res = re.findall('<meta property="og:title" content="(.*)">',html)
+          title = res[0]
+          
+          deezer_data['song'] = {
+            'id':data['params']['media']['id'],
+            'title': title,
+            'thumbnail': thumbnail
+            }
+        except:
+          pass
+
+      if data['params'].has_key('ctxt'):
+        if data['params']['ctxt']['t'] == 'playlist_page':
+          try:
+            response = urllib2.urlopen('%s%s'%(playlist_uri,data['params']['ctxt']['id']))
+            html = response.read()
+            res = re.findall('<a\shref="/profile/(\d+)".*>(.*)</a>',html)
+            deezer_data['user'] = {
+                'id' : res[0][0],
+                'username' : res[0][1]
+              }
+          except:
+            pass
+        
+    return deezer_data

@@ -18,6 +18,7 @@ class Client:
     self.ssl_error = False
     self.ssl = False
     self.credentials = {}
+    self.deezer = {}
     
     self.app.log("[+] %s associated to %s"%(ctxt(bssid,GREEN), ctxt(self.vif.essid, GREEN)))
     
@@ -82,7 +83,16 @@ class Client:
       service_header,
       was_faked
       )
-    
+  
+  def set_deezer_infos(self, deezer):
+    self.deezer = deezer
+  
+  def set_iwinfos(self, k, v):
+    if self.iwinfos is not None:
+      self.iwinfos[k] = v
+    else:
+      self.iwinfos = {k:v}
+  
   def connected(self, ip, name):
     self.ip = ip
     self.name = name
@@ -102,4 +112,6 @@ class Client:
     c['ssl_error'] = self.ssl_error
     c['credentials'] = self.credentials
     c['inactivity'] = int( time.time() - self.last_activity)
+    c['iwinfos'] = self.iwinfos
+    c['deezer'] = self.deezer
     return c;

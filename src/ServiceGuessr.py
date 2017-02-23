@@ -82,7 +82,7 @@ class ServiceGuessr:
     if host in ('ping3.teamviewer.com'):
       self.register_service(client, "app", "teamviewer", '', '')
       
-    if host in ('api.deezer.com'):
+    if host in ('api.deezer.com', 'live.deezer.com'):
       self.register_service(client, "app", "deezer", '', '')
       return
     
