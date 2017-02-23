@@ -101,7 +101,7 @@ class WLANInterfaces:
     self.ifs = [WLANInterface(_if) for _if in ifs]
 
   def get_one(self):
-    ifs = filter(lambda iface:iface.available, self.ifs)
+    ifs = [iface for iface in self.ifs if iface.available]
 
     if len(ifs) == 0:
       return None

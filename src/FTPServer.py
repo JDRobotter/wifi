@@ -1,8 +1,8 @@
 from threading import Lock,Thread
-import BaseHTTPServer
-from SocketServer import ThreadingMixIn, TCPServer, BaseRequestHandler
+import http.server
+from socketserver import ThreadingMixIn, TCPServer, BaseRequestHandler
 
-from Utils import *
+from .Utils import *
 
 class FTPTCPRequestHandler(BaseRequestHandler):
 
