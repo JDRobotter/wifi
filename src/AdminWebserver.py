@@ -1,3 +1,4 @@
+from StringIO import StringIO
 import zlib
 from threading import Lock,Thread
 import BaseHTTPServer
@@ -8,6 +9,7 @@ from Webserver import *
 from Utils import *
 import urlparse
 import urllib2
+import gzip
 
 class AdminWebserver(Thread):
   daemon=True
@@ -35,22 +37,43 @@ class AdminWebserver(Thread):
 
 class AdminHTTPRequestHandler(HTTPRequestHandler):    
   
+  def is_gzip_accepted(self):
+    if 'Accept-Encoding' in self.headers:
+      encodings = [ x.strip() for x in self.headers['Accept-Encoding'].split(',')]
+      if 'gzip' in encodings:
+        return True
+    return False
+  
   def _send_json(self, obj):
+    data = json.dumps(obj, ensure_ascii=False).encode('utf8')
+    
     self.send_response(200)
     self.send_header('Content-Type','application/json')
     self.send_header('Cache-Control','no-cache, no-store, must-revalidate')
     self.send_header('Pragma','no-cache')
     self.send_header('Expires','0')
     self.send_header('Access-Control-Allow-Origin','*')
-    self.end_headers()
 
-    data = json.dumps(obj, ensure_ascii=False)
+    if self.is_gzip_accepted():
+      data = self.gzip_compress(data)
+      self.send_header('Content-Encoding','gzip')
+    
+    self.end_headers()
+    
     try:
       self.wfile.write(data)
     except Exception as e:
       raise
     
-    
+  
+  def gzip_compress(self, string):
+    sio = StringIO()
+    gf = gzip.GzipFile(mode='wb', fileobj=sio)
+    gf.write(string)
+    gf.close()
+    return sio.getvalue()
+  
+  
   def _get_logs(self, full = False):
     if full:
       if self.server.logfile is not None:
@@ -104,13 +127,18 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     if os.path.exists(_path):
       try:
         # open asked file
-        data = open(_path,'r').read()
+        data = open(_path,'rb').read()
 
         # send HTTP OK
         self.send_response(200)
         self.send_header('Cache-Control','public, max-age=99936000')
         self.send_header('Expires','Sat, 01 Jul 2055 03:42:00 GMT')
         #self.send_header('Last-Modified','Tue, 15 Nov 1994 12:30:00 GMT')
+        
+        if self.is_gzip_accepted():
+          data = self.gzip_compress(data)
+          self.send_header('Content-Encoding','gzip')
+        
         self.end_headers()
 
         # push data
