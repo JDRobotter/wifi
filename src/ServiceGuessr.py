@@ -1,4 +1,4 @@
-from user_agents import parse as ua_parse
+#from user_agents import parse as ua_parse
 import re
 
 from src.DeviceGuessr import DeviceGuessr
@@ -26,12 +26,12 @@ class ServiceGuessr:
     return kvs
   
   def get_dns(self, mac):
-    if not self.dns.has_key(mac):
+    if mac not in self.dns:
       return []
     return self.dns[mac]
   
   def get_services(self, mac):
-    if not self.services.has_key(mac):
+    if mac not in self.services:
       return []
     return self.services[mac]
   
@@ -158,18 +158,21 @@ class ServiceGuessr:
     if 'user-agent' in headers:
       ua_string = headers['user-agent']
       # parse UA using lib, store device intel and browser intel
-      infos = ua_parse(ua_string)
+      infos = None
+      print("Not implemented")
+      #infos = ua_parse(ua_string)
+      
+      if infos is not None:
+        if infos.device.brand is not None and infos.device.model is not None:
+          self.device_guessr.new_hint(client.bssid,
+            infos.device.brand,
+            infos.device.model,
+            infos.device.family)
 
-      if infos.device.brand is not None and infos.device.model is not None:
-        self.device_guessr.new_hint(client.bssid,
-          infos.device.brand,
-          infos.device.model,
-          infos.device.family)
-
-      self.register_service(client, "browser",
-        infos.browser.family,
-        '.'.join([str(x) for x in infos.browser.version]),
-        infos.browser.version_string)
+        self.register_service(client, "browser",
+          infos.browser.family,
+          '.'.join([str(x) for x in infos.browser.version]),
+          infos.browser.version_string)
 
       m = re.match("Network Info II rv:(\d\.\d\.\d)", ua_string)
       if m is not None:

@@ -3,9 +3,11 @@ import traceback
 import os
 import time,re,tempfile
 import subprocess
-from scapy.all import *
+try:
+  from scapy.all import *
+except:
+  print("No scapy features")
 import argparse
-import urllib2
 import signal
 import string
 import sys
@@ -20,7 +22,7 @@ def log(message):
   if km is not None:
     km.log(message)
   else:
-    print message
+    print(message)
 
 #CERTFILE='./certs/fullchain.pem'
 #KEYFILE='./certs/privkey.pem'
@@ -108,7 +110,7 @@ if __name__ == '__main__':
     if os.path.exists(sl) or os.path.islink(sl):
       os.unlink(sl)
     src = os.path.join(os.path.abspath(args.logpath), 'wifis.log')
-    print src,sl
+    print(src,sl)
     os.symlink(src, sl)
 
   try:
@@ -208,7 +210,7 @@ if __name__ == '__main__':
   except KeyboardInterrupt:
     pass
   except Exception as e:
-    print e
+    print(e)
     exc_type, exc_value, exc_traceback = sys.exc_info()
     traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
     traceback.print_exception(exc_type, exc_value, exc_traceback,

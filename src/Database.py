@@ -1,6 +1,6 @@
 import sqlite3, os, time
 from threading import Thread
-from Queue import Queue
+from queue import Queue
 
 class ClientsDatabase(Thread):
   daemon = True
@@ -153,7 +153,7 @@ class ClientsDatabase(Thread):
     if vs is None:
       vs = [[] for h in header]
 
-    return [dict(zip(header,v)) for v in vs]
+    return [dict(list(zip(header,v))) for v in vs]
 
   def new_ap_connection(self, ap_bssid, ap_essid, client_mac):
     self.insert_values('ap_connections', (
@@ -228,7 +228,7 @@ class ClientsDatabase(Thread):
     header = ('date','timestamp','client_mac','service_name','service_request','service_uri','service_params','service_header','was_faked')
     if vs is None:
       vs = [[] for h in header]
-    return [dict(zip(header,v)) for v in vs]
+    return [dict(list(zip(header,v))) for v in vs]
   
   def get_images(self):
     where = "uri like '%.png%' or uri like '%.jpg%' or uri like '%.jpeg%' or uri like '%.tiff%'"

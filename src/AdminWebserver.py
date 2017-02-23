@@ -1,14 +1,14 @@
 from StringIO import StringIO
 import zlib
 from threading import Lock,Thread
-import BaseHTTPServer
-from SocketServer import ThreadingMixIn, TCPServer, BaseRequestHandler
+import http.server
+from socketserver import ThreadingMixIn, TCPServer, BaseRequestHandler
 import socket
 import os
-from Webserver import *
-from Utils import *
-import urlparse
-import urllib2
+from .Webserver import *
+from .Utils import *
+import urllib.parse
+import urllib.request, urllib.error, urllib.parse
 import gzip
 
 class AdminWebserver(Thread):
@@ -26,11 +26,11 @@ class AdminWebserver(Thread):
     handler_class=AdminHTTPRequestHandler
     server_address = ('', self.port)
     httpd = None
-    try:
-      httpd = server_class(server_address, self.app, handler_class, True, 'www/')
-    except socket.error as e:
-      self.app.log("%s Could not start ADMIN server on port %d"%(ctxt('[!]',RED),self.port))
-      return
+    #try:
+    httpd = server_class(server_address, self.app, handler_class, True, 'www/')
+    #except socket.error as e:
+      #self.app.log("%s Could not start ADMIN server on port %d"%(ctxt('[!]',RED),self.port))
+      #return
     httpd.PRE = "HTTP"
     httpd.serve_forever()
     self.app.log("[%s] ADMIN server on port %d is shutting down"%(ctxt('x',RED),self.port))
@@ -61,7 +61,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     self.end_headers()
     
     try:
-      self.wfile.write(data)
+      self.wfile.write(data.encode('utf-8'))
     except Exception as e:
       raise
     
@@ -97,8 +97,8 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     for client in self.server.app.clients:
       status['clients'].append(client.get_data())
     status['aps'] = {}
-    for iface,ap in self.server.app.aps.iteritems():
-      for iface, viface in ap.virtuals.iteritems():
+    for iface,ap in list(self.server.app.aps.items()):
+      for iface, viface in list(ap.virtuals.items()):
         key = viface.iface
         status['aps'][key] = {}
         status['aps'][key]['secure'] = viface.secure
@@ -113,7 +113,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
           pass
         status['aps'][key]['timeout'] = ap.timeout
         status['aps'][key]['clients'] = {}
-        for mac,client in viface.clients.iteritems():
+        for mac,client in list(viface.clients.items()):
           status['aps'][key]['clients'][mac] = client.get_data()
         
     self._send_json(status)
@@ -154,7 +154,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     imgs = self.server.app.db.get_images()
     data = '<html><ul>'
     for img in imgs:
-      print img['service_uri']
+      print((img['service_uri']))
       data += '<li><img src="%s" alt=""></li>'%img['service_uri']
     data += '</ul><html>'
     self.wfile.write(data)
@@ -175,14 +175,14 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     self.end_headers()
     #TODO better id
     request = self.server.app.db.get_requests('timestamp = "%s"'%id)[0]
-    req = urllib2.Request(request['service_uri'])
+    req = urllib.request.Request(request['service_uri'])
     for h in request['service_header'].split("\n"):
       items = h.split(":")
       key = items[0]
       value = ':'.join(items[1:])
       req.add_header(key, value)
     
-    response = urllib2.urlopen(req)
+    response = urllib.request.urlopen(req)
     data = response.read()
     
     try:
@@ -204,7 +204,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
   
   def do_POST(self):
     path,params,args = self._parse_url()
-    dparams = {} if params is None else urlparse.parse_qs(params)
+    dparams = {} if params is None else urllib.parse.parse_qs(params)
     if ('..' in args) or ('.' in args):
       self.send_400()
       return
@@ -223,7 +223,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
   def do_GET(self):
     path,params,args = self._parse_url()
     set_title('ws %s'%path)
-    dparams = {} if params is None else urlparse.parse_qs(params)
+    dparams = {} if params is None else urllib.parse.parse_qs(params)
     if ('..' in args) or ('.' in args):
       self.send_response(400)
       self.end_headers()

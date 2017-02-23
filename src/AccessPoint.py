@@ -5,9 +5,9 @@ import subprocess
 import os
 from datetime import datetime
 import random
-from SambaCrawler import *
-from Utils import *
-from Client import *
+from .SambaCrawler import *
+from .Utils import *
+from .Client import *
 
 class VirtualInterface(Thread):
   def __init__(self,ap, iface,bssid, essid, fishing):
@@ -45,7 +45,7 @@ class VirtualInterface(Thread):
       # allow DHCP
       self.setup_allow('udp', 67)
       # redirect the following ports
-      for sport, dport in self.karma.redirections.iteritems():
+      for sport, dport in list(self.karma.redirections.items()):
         self.setup_allow('tcp',dport)
         self.setup_redirections(sport,dport)
       
@@ -83,13 +83,13 @@ class VirtualInterface(Thread):
     self.clients[mac].ping()
   
   def get_client_from_ip(self, ip):
-    for bssid, c in self.clients.iteritems():
+    for bssid, c in list(self.clients.items()):
       if c.ip == ip:
         return c
     return None
   
   def get_client(self, bssid):
-    if self.clients.has_key(bssid):
+    if bssid in self.clients:
       return self.clients[bssid]
     return None
   
@@ -109,7 +109,7 @@ class VirtualInterface(Thread):
       self.karma.log( "%s Unable to pop %s from %s"%(ctxt("[!]",RED), client.bssid, self.essid) )
   
   def client_connected(self, client):
-      for name, v in self.ap.virtuals.iteritems():
+      for name, v in list(self.ap.virtuals.items()):
         if v != self:
           if v.get_client(client.bssid) is not None:
             v.unregister_client(client)
@@ -220,7 +220,7 @@ class VirtualInterface(Thread):
           lines = lr.readlines()
           for line in lines:
             if len(line) != 0:
-              print line
+              print(line)
         i += 1
         
       if dhcpfd in rlist:
@@ -248,7 +248,7 @@ class VirtualInterface(Thread):
                   mac = m.groups()
                   self.karma.log( "dissociated %s"%mac)
                   client = self.get_client(mac)
-                  for iface, v in self.virtuals.iteritems():
+                  for iface, v in list(self.virtuals.items()):
                     c = v.get_client(mac)
                     if c is None:
                         v.unregister_client(c)
@@ -519,7 +519,7 @@ class AccessPoint(Thread):
     
     self.ifaces,self.hostapd_process = self.create_hostapd_access_point()
     self.virtuals = {}
-    for iface, essid in self.ifaces.iteritems():
+    for iface, essid in list(self.ifaces.items()):
       bssid = 'TO_DO'
       self.virtuals[iface] = VirtualInterface(self, iface, bssid, essid, fishing)
 
@@ -536,14 +536,14 @@ class AccessPoint(Thread):
 
 
   def get_client_from_ip(self, ip):
-    for iface, v in self.virtuals.iteritems():
+    for iface, v in list(self.virtuals.items()):
       c = v.get_client_from_ip(ip)
       if c is not None:
         return c
     return None
   
   def get_client(self, bssid):
-    for iface,v in self.virtuals.iteritems():
+    for iface,v in list(self.virtuals.items()):
       c = v.get_client(bssid)
       if c is not None:
         return c
@@ -558,7 +558,7 @@ class AccessPoint(Thread):
       self.karma.log( "%s could not kill hostapd"%ctxt("[!]",RED))
 
   def run(self):
-    for iface, v in self.virtuals.iteritems():
+    for iface, v in list(self.virtuals.items()):
       v.start()
     
     hostapd_log = None
@@ -578,7 +578,7 @@ class AccessPoint(Thread):
 
     
     while True:
-      for iface, v in self.virtuals.iteritems():
+      for iface, v in list(self.virtuals.items()):
         stop = True
         if v.activity_ts is None:
           stop = True
@@ -626,13 +626,13 @@ class AccessPoint(Thread):
                 self.karma.log( "%s Unable to start hostapd on interface %s: %s"%(ctxt("[!]",RED),ctxt(ifname,RED), line))
                 self.restart()
       
-    print "no more hostapd"
+    print("no more hostapd")
     hostapd_log.close()
     if not (self.karma.debug or keep_hostapd_log):
       os.remove(hostapd_log.name)
-    for iface, v in self.virtuals.iteritems():
+    for iface, v in list(self.virtuals.items()):
       v.stop()
-    for iface, v in self.virtuals.iteritems():
+    for iface, v in list(self.virtuals.items()):
       v.join()
       
     cmd = ["iwconfig", self.ifhostapd.str(), "mode", 'managed']
@@ -643,7 +643,7 @@ class AccessPoint(Thread):
   def restart(self):
     # will remove AP from list on next check
     if self.karma.debug:
-      print hostapd_error
+      print(hostapd_error)
 
   def get_essids(self):
     essids = []

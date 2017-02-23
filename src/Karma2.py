@@ -7,7 +7,7 @@ import traceback
 from src.SambaCrawler import *
 from src.POP3Server import *
 from src.FTPServer import *
-from src.SMBServer import *
+#from src.SMBServer import *
 from src.Webserver import *
 from src.AdminWebserver import *
 from src.AccessPoint import *
@@ -36,7 +36,7 @@ class Karma2(Thread):
     self.ifgw = args.gateway
     self.ifhostapds = WLANInterfaces(args.hostapds)
     self.aps = {}
-    self.subnets = set(xrange(50,256)) 
+    self.subnets = set(range(50,256)) 
     self.clear_iptables()
     self.offline = args.offline
     self.tcpdump = args.tcpdump
@@ -58,7 +58,7 @@ class Karma2(Thread):
     if args.ignore is not None:
       self.ignore_bssid = args.ignore[0]
     self.redirections = {}
-
+    
     if not args.offline:
       self.setup_nat(self.ifgw)
     else:
@@ -98,7 +98,8 @@ class Karma2(Thread):
     cmd = ['git','rev-parse','--short','HEAD']
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     p.wait()
-    return p.stdout.read().strip('\n').strip()
+    data = p.stdout.read().decode("utf-8")
+    return data.strip('\n').strip()
 
   def log_exception(self, e):
     self.log("Exception: %s"%ctxt(str(e), RED))
@@ -110,7 +111,7 @@ class Karma2(Thread):
   def log(self, message):
     with self.log_lock:
       message="%s  %s"%(time.strftime("%H:%M:%S"), message)
-      print message
+      print(message)
       if self.logfile is not None:
         message="%s  %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
         self.logfile.write("%s\n"%message)
@@ -118,16 +119,16 @@ class Karma2(Thread):
       sys.stdout.flush()
   
   def get_client_ap(self,ip):
-    for iface,ap in self.aps.iteritems():
-      for k,v in ap.virtuals.iteritems():
-        for m,c in v.clients.iteritems():
+    for iface,ap in list(self.aps.items()):
+      for k,v in list(ap.virtuals.items()):
+        for m,c in list(v.clients.items()):
           if c.ip == ip:
             return ap
 
   def get_client_bssid(self, ip):
-    for iface,ap in self.aps.iteritems():
-      for k,v in ap.virtuals.iteritems():
-        for m,c in v.clients.iteritems():
+    for iface,ap in list(self.aps.items()):
+      for k,v in list(ap.virtuals.items()):
+        for m,c in list(v.clients.items()):
           if c.ip == ip:
             return m
   
@@ -145,18 +146,18 @@ class Karma2(Thread):
     if self.uri is None:
       return
     try:
-      req = urllib2.Request('%s/users.json'%self.uri)
+      req = urllib.request.Request('%s/users.json'%self.uri)
       req.add_header('Content-Type', 'application/json')
-      response = urllib2.urlopen(req, json.dumps(login, ensure_ascii=False))
+      response = urllib.request.urlopen(req, json.dumps(login, ensure_ascii=False))
     except:
       self.log( "could not update login")
 
     if self.uri is None:
       return
     try:
-      req = urllib2.Request('%s/users.json'%self.uri)
+      req = urllib.request.Request('%s/users.json'%self.uri)
       req.add_header('Content-Type', 'application/json')
-      response = urllib2.urlopen(req, json.dumps(dns, ensure_ascii=False))
+      response = urllib.request.urlopen(req, json.dumps(dns, ensure_ascii=False))
     except:
       self.log( "could not update dns")
   
@@ -193,20 +194,20 @@ class Karma2(Thread):
     self.subnets.add(subnet.base)
   
   def set_secure(self, iface,secure):
-    for i, ap in self.aps.iteritems():
-      for v, vif in ap.virtuals.iteritems():
+    for i, ap in list(self.aps.items()):
+      for v, vif in list(ap.virtuals.items()):
         if v == iface:
           vif.secure_network(secure)
   
   def get_client_from_ip(self, ip):
-    for iface, ap in self.aps.iteritems():
+    for iface, ap in list(self.aps.items()):
       c = ap.get_client_from_ip(ip)
       if c is not None:
         return c
     return None
   
   def get_client(self, bssid):
-    for iface, ap in self.aps.iteritems():
+    for iface, ap in list(self.aps.items()):
       c = ap.get_client(bssid)
       if c is not None:
         return c
@@ -266,7 +267,7 @@ class Karma2(Thread):
     for p in self.probes_queue:
       if p['essid'] == essid:
         keep = False
-    for i,a in self.aps.iteritems():
+    for i,a in list(self.aps.items()):
       if essid in a.get_essids():
         keep = False
     if keep:
@@ -293,7 +294,7 @@ class Karma2(Thread):
       while len(self.probes_queue) != 0:
         keep = True
         p = self.probes_queue.pop(0)
-        for i,a in self.aps.iteritems():
+        for i,a in list(self.aps.items()):
           if p['essid'] in a.get_essids():
             keep = False
         if keep and not p['essid'] in self.forbidden_aps:
@@ -332,8 +333,8 @@ class Karma2(Thread):
         while True:
           data = None
           try:
-            req = urllib2.Request("%s/status.json"%self.ifmon)
-            f = urllib2.urlopen(req)
+            req = urllib.request.Request("%s/status.json"%self.ifmon)
+            f = urllib.request.urlopen(req)
             data = f.read()
             j =  json.loads(data)
             for p in j['current']['probes']:
@@ -387,17 +388,18 @@ class Karma2(Thread):
     pop.start()
 
   def start_smbserver(self, km, smb_port):
-    smb = SMBServer(km, smb_port)
-    smb.start()
+    #smb = SMBServer(km, smb_port)
+    #smb.start()
+    print("Not implemented")
 
   def start_ftpserver(self, km, ftp_port):
     ftp = FTPServer(km, ftp_port)
     ftp.start()
 
   def status(self, signum, stack):
-    print ">>"
-    for essid,ap in self.aps.iteritems():
-      print "%s => %s (%s), inactive for %ss/%ss"%(ap.ifhostapd.iface, ap.essid, len(ap.clients), int((time.time() - ap.activity_ts)), ap.timeout)
-      for mac,ip in ap.clients.iteritems():
-        print "\t%s => %s"%(mac,ip)
-    print "<<"
+    print(">>")
+    for essid,ap in list(self.aps.items()):
+      print(("%s => %s (%s), inactive for %ss/%ss"%(ap.ifhostapd.iface, ap.essid, len(ap.clients), int((time.time() - ap.activity_ts)), ap.timeout)))
+      for mac,ip in list(ap.clients.items()):
+        print(("\t%s => %s"%(mac,ip)))
+    print("<<")

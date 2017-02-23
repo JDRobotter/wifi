@@ -2,7 +2,7 @@ from threading import Lock,Thread
 import os, re, time
 import subprocess
 
-from Utils import *
+from .Utils import *
 
 class SambaCrawler(Thread):
   daemon = True

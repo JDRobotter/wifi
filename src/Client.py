@@ -1,5 +1,5 @@
 import time
-from Utils import *
+from .Utils import *
 
 class Client:
   def __init__(self, vif, bssid, ip = '', name = ''):
@@ -41,7 +41,7 @@ class Client:
   def log_login(self, user):
     self.app.log('[+] %s %s login: %s, password: %s, uri: %s'%(ctxt('[*]', RED), ctxt(self.bssid, GREEN), ctxt(user['login'], RED),ctxt(user['password'], RED), ctxt(user['uri'], RED)))
     self.db.new_client_credentials(user['login'], user['password'], user['uri'], self.bssid)
-    if not self.credentials.has_key(user['uri']):
+    if user['uri'] not in self.credentials:
       self.credentials[user['uri']] = user
     
   def register_post(self, uri, path):
@@ -53,7 +53,7 @@ class Client:
     self.app.log("[+] %s post request to %s saved"%(self.bssid, ctxt(uri, GREEN)))
   
   def register_cookie(self, host, path):
-    if not self.cookies.has_key(host):
+    if host not in self.cookies:
       self.cookies[host] = path
 
   def register_service(self, service_type, service_name, service_version, service_extra):
