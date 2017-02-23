@@ -11,6 +11,11 @@ import urllib.parse
 import urllib.request, urllib.error, urllib.parse
 import gzip
 
+import asyncio
+import datetime
+import random
+import websockets
+
 class AdminWebserver(Thread):
   daemon=True
   def __init__(self, app, port = 80, www  = 'www'):
@@ -18,6 +23,13 @@ class AdminWebserver(Thread):
     self.app = app
     self.port = port
     self.www_directory = www
+    self.ws = None
+
+  async def time(self, websocket, path):
+    while True:
+        now = datetime.datetime.utcnow().isoformat() + 'Z'
+        await websocket.send(json.dumps({'now':now}))
+        await asyncio.sleep(random.random() * 3)
 
   def run(self):
     set_title('adminserver %s'%self.port)
@@ -28,6 +40,13 @@ class AdminWebserver(Thread):
     httpd = None
     #try:
     httpd = server_class(server_address, self.app, handler_class, True, 'www/')
+    
+    self.ws = websockets.serve(self.time, '0.0.0.0', 9998)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    asyncio.get_event_loop().run_until_complete(self.ws)
+    asyncio.get_event_loop().run_forever()
+    
     #except socket.error as e:
       #self.app.log("%s Could not start ADMIN server on port %d"%(ctxt('[!]',RED),self.port))
       #return
