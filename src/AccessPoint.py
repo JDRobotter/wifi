@@ -32,7 +32,7 @@ class VirtualInterface(Thread):
     # will run in main loop
     self.iw_monitoring_processes = []
     self.iw_monitoring_timeout = None
-    
+
     if self.karma.tcpdump:
       self.tcpdump_process = self.start_tcp_dump()
     else:
@@ -48,7 +48,7 @@ class VirtualInterface(Thread):
       for sport, dport in list(self.karma.redirections.items()):
         self.setup_allow('tcp',dport)
         self.setup_redirections(sport,dport)
-      
+
       for bssid in self.karma.get_ignore_bssid():
         self.setup_whitelist(bssid)
       self.connectionwatch_process = self.start_connectionwatch(iface)
@@ -685,39 +685,40 @@ class AccessPoint(Thread):
     ifaces[interface] = ap['essid']
     
     f = tempfile.NamedTemporaryFile(delete=False)
+    config = ''
     if self.karma.args.hostapd is None:
-      f.write('driver=nl80211\n')
+      config += 'driver=nl80211\n'
     
-    f.write("interface=%s\n"%(interface))
-    f.write("ssid=%s\n"%(ap['essid']))
-    f.write("bssid=%s\n"%(ap['bssid']))
-    f.write("channel=%s\n"%(channel))
-    #f.write("hw_mode=g\n")
-    #f.write("ieee80211n=1\n")
+    config += "interface=%s\n"%(interface)
+    config += "ssid=%s\n"%(ap['essid'])
+    config += "bssid=%s\n"%(ap['bssid'])
+    config += "channel=%s\n"%(channel)
+    #config += "hw_mode=g\n"
+    #config += "ieee80211n=1\n"
     if ap['wpa'] is not None:
-      f.write("wpa=2\n")
-      f.write("wpa_passphrase=%s\n"%ap['wpa'])
-      f.write("wpa_key_mgmt=WPA-PSK\n")
-      f.write("wpa_pairwise=CCMP\n")
-      f.write("rsn_pairwise=CCMP\n")
+      config += "wpa=2\n"
+      config += "wpa_passphrase=%s\n"%ap['wpa']
+      config += "wpa_key_mgmt=WPA-PSK\n"
+      config += "wpa_pairwise=CCMP\n"
+      config += "rsn_pairwise=CCMP\n"
     
     i = 0
     for ap in self.aps[1:]:
       new_interface = "%s_%s"%(interface[-3:], i)
       ifaces[new_interface] = ap['essid']
-      f.write("bss=%s\n"%new_interface)
+      config += "bss=%s\n"%new_interface
       
       #may fail on some devices
-      #f.write("bssid=%s\n"%(ap['bssid']))
-      f.write("ssid=%s\n"%ap['essid'])
+      #config += "bssid=%s\n"%(ap['bssid']))
+      config += "ssid=%s\n"%ap['essid']
       if ap['wpa'] is not None:
-        f.write("wpa=2\n")
-        f.write("wpa_passphrase=%s\n"%ap['wpa'])
-        f.write("wpa_key_mgmt=WPA-PSK\n")
-        f.write("wpa_pairwise=CCMP\n")
-        f.write("rsn_pairwise=CCMP\n")
+        config += "wpa=2\n"
+        config += "wpa_passphrase=%s\n"%ap['wpa']
+        config += "wpa_key_mgmt=WPA-PSK\n"
+        config += "wpa_pairwise=CCMP\n"
+        config += "rsn_pairwise=CCMP\n"
       i += 1
-    
+    f.write(config.encode('utf8'))
     f.close()
     
     exe = "hostapd"

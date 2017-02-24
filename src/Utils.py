@@ -43,7 +43,7 @@ class LineReader(object):
     return self._fd
 
   def readlines(self):
-    data = os.read(self._fd, 4096)
+    data = os.read(self._fd, 4096).decode('utf-8')
     if not data:
         # EOF
         return []
@@ -72,6 +72,7 @@ class WLANInterface:
     lines = stdoutdata.splitlines()
     phy = None
     for line in lines:
+      line = line.decode("utf8")
       m = re.match('.*wiphy (\d+).*', line)
       if m is not None:
         phy = m.groups()
@@ -84,6 +85,7 @@ class WLANInterface:
       lines = stdoutdata.splitlines()
       parse = False
       for line in lines:
+        line = line.decode("utf8")
         if(line.find('valid interface combinations')!=-1):
           parse = True
         if parse:

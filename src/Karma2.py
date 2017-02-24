@@ -141,25 +141,7 @@ class Karma2(Thread):
     except IOError:
       self.log("[%s] iface %s not found"%(ctxt("!", RED),_iface))
       
-  
-  def update_login(self, login):
-    if self.uri is None:
-      return
-    try:
-      req = urllib.request.Request('%s/users.json'%self.uri)
-      req.add_header('Content-Type', 'application/json')
-      response = urllib.request.urlopen(req, json.dumps(login, ensure_ascii=False))
-    except:
-      self.log( "could not update login")
 
-    if self.uri is None:
-      return
-    try:
-      req = urllib.request.Request('%s/users.json'%self.uri)
-      req.add_header('Content-Type', 'application/json')
-      response = urllib.request.urlopen(req, json.dumps(dns, ensure_ascii=False))
-    except:
-      self.log( "could not update dns")
   
   def start_metasploit(self, console):
     self.log( "[+] Starting metasploit")
@@ -320,7 +302,7 @@ class Karma2(Thread):
     process.wait()
     (stdoutdata, stderrdata) = process.communicate();
     output = stdoutdata
-    lines = output.splitlines()
+    lines = output.decode('utf-8').splitlines()
     for line in lines:
       if(line.find("IEEE 802.11")!=-1):
         networkInterfaces.append(line.split()[0])
@@ -335,7 +317,7 @@ class Karma2(Thread):
           try:
             req = urllib.request.Request("%s/status.json"%self.ifmon)
             f = urllib.request.urlopen(req)
-            data = f.read()
+            data = f.read().decode('utf-8')
             j =  json.loads(data)
             for p in j['current']['probes']:
               bssid = None

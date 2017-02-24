@@ -177,7 +177,7 @@ class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
           ctxt('[*]',YELLOW),
           client.bssid,
           host,
-          ctxt(base64.decodestring(haparams[1]), YELLOW)))
+          ctxt(base64.b64decode(haparams[1]), YELLOW)))
       else:
         self.server.app.log( "%s HTTP %s authorization from %s to host %s: %s"%(
           ctxt('[*]',YELLOW),

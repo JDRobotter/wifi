@@ -1,4 +1,3 @@
-from StringIO import StringIO
 import zlib
 from threading import Lock,Thread
 import http.server
@@ -61,17 +60,13 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     self.end_headers()
     
     try:
-      self.wfile.write(data.encode('utf-8'))
+      self.wfile.write(data)
     except Exception as e:
       raise
     
   
   def gzip_compress(self, string):
-    sio = StringIO()
-    gf = gzip.GzipFile(mode='wb', fileobj=sio)
-    gf.write(string)
-    gf.close()
-    return sio.getvalue()
+    return gzip.compress(string)
   
   
   def _get_logs(self, full = False):
