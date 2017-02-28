@@ -246,6 +246,9 @@ function AppController($http, $scope, $mdDialog, $sce, ansi2html) {
     else if(name == 'CFNetwork') {
       return {"type":"md-icon","src":"assets/apple.svg"}
     }
+    else if(name == 'blablacar') {
+      return {"type":"img","src":"assets/blablacar.png"}
+    }
     else if(infos.type == 'browser') {
       return {"type":"i","src":"picture_in_picture"}
     }

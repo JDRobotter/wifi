@@ -86,11 +86,19 @@ class ServiceGuessr:
       self.register_service(client, "app", "deezer", '', '')
       return
     
+    if host in ('beacon.shazam.com',):
+      self.register_service(client, "app", "shazam", '', '')
+      return
+    
     if host in ('apresolve.spotify.com',):
       self.register_service(client, "app", "spotify", '', '')
       return
     
-    if host in ('airbnb.com',):
+    if host in ('api.blablacar.com',):
+      self.register_service(client, "app", "blablacar", '', '')
+    
+    m = re.match(r'api.airbnb.com$',host)
+    if m is not None:
       self.register_service(client, "app", "airbnb", '', '')
       return
     
@@ -132,7 +140,7 @@ class ServiceGuessr:
     if m is not None:
       self.register_service(client, "app", "skydrive", '', '')
 
-    m = re.match(r'\w\+.whatsapp.net', host)
+    m = re.match(r'\w+.whatsapp.net', host)
     if m is not None:
       self.register_service(client, "app", "whatsapp", '', '')
       return
