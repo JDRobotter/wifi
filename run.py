@@ -156,6 +156,9 @@ if __name__ == '__main__':
         
         try:
           wpa = props[2]
+          if len(wpa) < 8:
+            log('Wpa length error')
+            wpa = None
         except:
           pass
         
