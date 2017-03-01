@@ -116,7 +116,10 @@ class Karma2(Thread):
         message="%s  %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
         self.logfile.write("%s\n"%message)
         self.logfile.flush()
-      sys.stdout.flush()
+      try:
+        sys.stdout.flush()
+      except:
+        pass
   
   def get_client_ap(self,ip):
     for iface,ap in list(self.aps.items()):

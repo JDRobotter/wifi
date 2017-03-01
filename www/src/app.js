@@ -193,7 +193,7 @@ function AppController($http, $scope, $mdDialog, $sce, ansi2html) {
       return {"type":"md-icon","src":"assets/dropbox.svg"}
     }
     else if(name == 'whatsapp') {
-      return {"type":"md-icon","src":"assets/whatsapp.svg"}
+      return {"type":"img","src":"assets/whatsapp.png"}
     }
     else if(name == 'spotify') {
       return {"type":"md-icon","src":"assets/spotify.svg"}
@@ -202,7 +202,7 @@ function AppController($http, $scope, $mdDialog, $sce, ansi2html) {
       return {"type":"md-icon","src":"assets/sncf.svg"}
     }
     else if(name == 'deezer') {
-      return {"type":"md-icon","src":"assets/deezer.svg"}
+      return {"type":"img","src":"assets/deezer.png"}
     }
     else if(name == 'teamviewer') {
       return {"type":"md-icon","src":"assets/teamviewer.svg"}

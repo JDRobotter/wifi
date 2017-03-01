@@ -194,8 +194,12 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
 
     db = self.server.app.db
     obj = db.fetch_last_requests('all',num)
-
-    self._send_json(obj)
+    try:
+      self._send_json(obj)
+    except Exception as e:
+      self.server.app.log("[%s] _query:  %s"%(ctxt('x',RED), str(e)))
+      self.send_response(500)
+      self.end_headers()
   
   def do_POST(self):
     path,params,args = self._parse_url()
