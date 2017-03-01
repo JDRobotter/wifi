@@ -155,8 +155,9 @@ class VirtualInterface(Thread):
         self.karma.log( "%s could not kill connectionwatch"%ctxt("[!]",RED))
     
     #clear route cache
+    FNULL = open(os.devnull, 'w')
     cmd = ["ip", "route", "del", self.subnet.range_null()]
-    p = subprocess.Popen(cmd)
+    p = subprocess.Popen(cmd, stdout=FNULL, stderr=FNULL)
     p.wait()
     
     for p in self.nmaps:
@@ -391,8 +392,13 @@ class VirtualInterface(Thread):
     self.karma.log( "[+] Uping iface %s w/ subnet %s"%(iface,subnet.range()))
     iprange = "%s"%subnet.range()
     cmd = ["ifconfig",iface,iprange]
-    p = subprocess.Popen(cmd)
+    p = subprocess.Popen( cmd,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE)
     p.wait()
+    stdout, stderr = p.communicate()
+    if stderr != b'':
+      self.karma.log( "%s Uping iface %s error: %s"%(ctxt('[!]', RED),iface,ctxt(stderr.decode('utf-8'), RED)))
 
   def nmap(self, ip):
     self.karma.log( "[+] nmapping %s"%ip)
@@ -518,6 +524,10 @@ class AccessPoint(Thread):
         ap['bssid'] = self.get_random_bssid()
     
     self.ifaces,self.hostapd_process = self.create_hostapd_access_point()
+    
+    #wait for interfaces to be created
+    time.sleep(1)
+    
     self.virtuals = {}
     for iface, essid in list(self.ifaces.items()):
       bssid = 'TO_DO'
@@ -636,8 +646,13 @@ class AccessPoint(Thread):
       v.join()
       
     cmd = ["iwconfig", self.ifhostapd.str(), "mode", 'managed']
-    p = subprocess.Popen(cmd)
+    p = subprocess.Popen( cmd,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE)
     p.wait()
+    stdout, stderr = p.communicate()
+    if stderr != b'':
+      self.karma.log( "%s Unable to restore interface %s: %s"%(ctxt("[!]",RED),ctxt(self.ifhostapd.str(),RED), stderr.decode('utf-8')))
     self.karma.ifhostapds.free_one(self.ifhostapd)
 
   def restart(self):

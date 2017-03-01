@@ -375,7 +375,7 @@ class Karma2(Thread):
   def start_smbserver(self, km, smb_port):
     #smb = SMBServer(km, smb_port)
     #smb.start()
-    print("Not implemented")
+    print("SMB server not implemented")
 
   def start_ftpserver(self, km, ftp_port):
     ftp = FTPServer(km, ftp_port)

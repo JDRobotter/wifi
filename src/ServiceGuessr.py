@@ -167,7 +167,7 @@ class ServiceGuessr:
       ua_string = headers['user-agent']
       # parse UA using lib, store device intel and browser intel
       infos = None
-      print("Not implemented")
+      print("device detection Not implemented")
       #infos = ua_parse(ua_string)
       
       if infos is not None:
