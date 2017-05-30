@@ -16,6 +16,8 @@ from src.ServiceGuessr import ServiceGuessr
 from src.Utils import *
 from src.AdminWebserver import *
 
+from scapy.all import *
+
 import sys
 
 class Karma2(Thread):

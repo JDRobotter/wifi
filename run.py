@@ -3,7 +3,6 @@ import traceback
 import os
 import time,re,tempfile
 import subprocess
-from scapy.all import *
 import argparse
 import urllib2
 import signal
