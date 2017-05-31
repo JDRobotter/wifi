@@ -22,6 +22,9 @@ Some nice shots:
 
 ## Features
 
+### Wan access not mandatory
+This tool does not requires any wan access so it can be package in a totally autonomous system even if phone and other devices believe they are connected to a real wan access. Please check the ````--offline```` option.
+
 ### Multi ssid
 It autodetects the [maximum number of Access Point](http://wiki.stocksy.co.uk/wiki/Multiple_SSIDs_with_hostapd) that can be run on each wifi dongle. It is then possible to create 8 fake access point using by [3$ device](https://www.amazon.fr/dp/B00EVI3V9Y/ref=pe_386181_124266941_TE_item)
 
@@ -31,7 +34,15 @@ All grabbed information are stored in a local sqlite database ( credentials, ser
 ### Logging
 Everything is logged in the Database, but also as standard files as for example post request data. Then you can unpack transmitted files, base64 data or try to understand binary data.
 One log folder is created by session, and within you will find post request, raw tcp dump data for each access point you created and a global log file which is available in realtime through the web ui
-TODO SCREENSHOT
+
+Realtime web logging
+
+![logs](doc/mobile_logs.png)
+
+
+Real time console file logging
+
+![logs](doc/log_file.png)
 
 ### Security
 Iptable is used to seggregate each access point and to avoid a possible client attack. Clients have only access to faked services, and only whitelisted mac address have access to the admin interface and other services such as ssh. The mac filtering is controlled by the ````--ignore```` option
@@ -202,11 +213,12 @@ Some FOTA uri checks:
  - authomatize half wpa handshake catching
  - map your clients trajectory with [WifiScanMap](https://github.com/mehdilauters/wifiScanMap/blob/master/Results.md)
 
- ![client tracking](https://raw.githubusercontent.com/mehdilauters/wifiScanMap/master/results/bus_date.png)
+ ![client tracking](https://raw.githubusercontent.com/mehdilauters/wifiScanMap/master/results/same_tram.png)
  - implement it on a droppable esp8266 box
  
    ![droppable magnetic scanner](https://raw.githubusercontent.com/mehdilauters/esp8266-wifiScanMap/master/doc/blackbox_open.png)
  - refactoring: using a sql abstraction, using a web server framework
+
 
 ## DISCLAIMER
 This project was developped for testing and experimentation purpose only. It was used to check how far it is possible to go with such chip devices. All credentials or other informations grabbed were not used against people.
