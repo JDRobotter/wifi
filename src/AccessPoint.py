@@ -50,11 +50,13 @@ class VirtualInterface(Thread):
         self.setup_redirections(sport,dport)
       
       for bssid in self.karma.get_ignore_bssid():
-        self.setup_whitelist(bssid)
+        if bssid != "*":
+          self.setup_whitelist(bssid)
       self.connectionwatch_process = self.start_connectionwatch(iface)
 
       # block all input packets
-      self.setup_block_all()
+      if "*" not in self.karma.get_ignore_bssid():
+        self.setup_block_all()
 
     else:
       self.connectionwatch_process = None
@@ -289,7 +291,7 @@ class VirtualInterface(Thread):
                 m = arp_watch_re.match(line)
                 if m is not None:
                   mac, ipsrc, ipdst = m.groups()
-                  if ipsrc == ipdst and mac not in self.karma.get_ignore_bssid():
+                  if ipsrc == ipdst and ( mac not in self.karma.get_ignore_bssid() or "*" not in self.karma.get_ignore_bssid() ):
                     self.karma.log("%s Gratuitous arp from %s to %s"%(self.essid, ctxt(mac,GREEN), ctxt(ipdst,GREEN)))
                     subnet_base = "%s.%%d"%('.'.join(ipsrc.split('.')[:3]))
                     subnet = IPSubnet(subnet_base)
@@ -607,7 +609,7 @@ class AccessPoint(Thread):
               iface, mac, = m.groups()
               v = self.virtuals[iface]
               c = v.get_client(mac)
-              if c is None and not mac in self.karma.get_ignore_bssid():
+              if c is None and not mac in self.karma.get_ignore_bssid() and "*" not in self.karma.get_ignore_bssid():
                 if mac not in self.karma.get_ignore_bssid():
                   v.register_client(mac)
                   self.unused = False
