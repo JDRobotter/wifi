@@ -232,7 +232,7 @@ This project was developped for testing and experimentation purpose only. It was
  git submodule update --init --recursive
 
  # setup dependencies
- apt install python-scapy hostapd smbclient python-impacket nmap iptables tcpdump dnsmasq airmon-ng smbclient npm
+ apt install python-scapy hostapd smbclient python-impacket nmap iptables tcpdump dnsmasq aircrack-ng smbclient npm
  pip install user-agents
 
  # setup web ui dependencies
