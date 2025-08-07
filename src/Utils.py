@@ -65,6 +65,7 @@ class WLANInterface:
     #iw phy phy3 info
 
   def get_availables_ap(self):
+    return 1
     command = ['iw', 'dev', self.iface, 'info']
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.wait()

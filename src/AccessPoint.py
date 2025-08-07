@@ -229,7 +229,7 @@ class VirtualInterface(Thread):
         lines = lr.readlines()
         for line in lines:
           if len(line) != 0:
-            #print "dnsmasq  %s"%line
+            #print("dnsmasq  %s"%line)
             m = dhcp_failed_re.match(line)
             if m is not None:
               self.karma.log( "%s %s"%(ctxt("[!]",RED), line))
@@ -370,13 +370,14 @@ class VirtualInterface(Thread):
       '-d',
       '--log-dhcp',
       '--bind-dynamic',
+      '--except-interface=lo',
       '--log-facility=-',
-      '-i', iface,
+      '--interface=%s'%iface,
+      '--listen-address', '%s'%(subnet.gateway()),
       '-F', '%s,%s'%(subnet.range_lower(),subnet.range_upper()),
       '--dhcp-option=option:router,%s'%(subnet.gateway()),
       '--dhcp-option=option:dns-server,%s'%(subnet.gateway()),
     ]
-      
     if(self.karma.offline):
       cmd.append('-R')
       # https://technet.microsoft.com/en-us/library/cc732049%28v=ws.10%29.aspx
@@ -391,7 +392,7 @@ class VirtualInterface(Thread):
     self.subnet = subnet
     self.karma.log( "[+] Uping iface %s w/ subnet %s"%(iface,subnet.range()))
     iprange = "%s"%subnet.range()
-    cmd = ["ifconfig",iface,iprange]
+    cmd = ["ip", "addr", "add", iprange, "dev", iface]
     p = subprocess.Popen( cmd,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE)
@@ -606,6 +607,7 @@ class AccessPoint(Thread):
         lr = LineReader(self.hostapd_process.stdout.fileno())
         lines = lr.readlines()
         for line in lines:
+          print("hostapd %s"%line)
           if len(line) != 0:
             if hostapd_log is not None:
               hostapd_log.write("%s\n"%line)
@@ -653,6 +655,7 @@ class AccessPoint(Thread):
     stdout, stderr = p.communicate()
     if stderr != b'':
       self.karma.log( "%s Unable to restore interface %s: %s"%(ctxt("[!]",RED),ctxt(self.ifhostapd.str(),RED), stderr.decode('utf-8')))
+      print(stderr)
     self.karma.ifhostapds.free_one(self.ifhostapd)
 
   def restart(self):
@@ -707,9 +710,9 @@ class AccessPoint(Thread):
     config += "interface=%s\n"%(interface)
     config += "ssid=%s\n"%(ap['essid'])
     config += "bssid=%s\n"%(ap['bssid'])
-    config += "channel=%s\n"%(channel)
-    #config += "hw_mode=g\n"
-    #config += "ieee80211n=1\n"
+    config += "channel=%s\n"%2
+    config += "hw_mode=g\n"
+    config += "ieee80211n=1\n"
     if ap['wpa'] is not None:
       config += "wpa=2\n"
       config += "wpa_passphrase=%s\n"%ap['wpa']

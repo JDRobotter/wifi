@@ -1,6 +1,7 @@
 CERTFILE='./cert.pem'
 KEYFILE='./key.pem'
 
+from scapy.all import *
 from threading import Lock
 import traceback
 
@@ -276,26 +277,26 @@ class Karma2(Thread):
     self.running = True
     while self.running:
       aps = []
-      while len(self.probes_queue) != 0:
-        keep = True
-        p = self.probes_queue.pop(0)
-        for i,a in list(self.aps.items()):
-          if p['essid'] in a.get_essids():
-            keep = False
-        if keep and not p['essid'] in self.forbidden_aps:
-        
-          wpa = None
-          if self.args.wpa:
-            wpa = "glopglopglop"
-          ap = {
-            'bssid':None,
-            'essid': p['essid'],
-            'wpa': wpa
-            }
-          aps.append(ap)
-
       if len(aps) > 0:
-        self.create_aps(aps, 30)
+        while len(self.probes_queue) != 0:
+          keep = True
+          p = self.probes_queue.pop(0)
+          for i,a in list(self.aps.items()):
+            if p['essid'] in a.get_essids():
+              keep = False
+          if keep and not p['essid'] in self.forbidden_aps:
+          
+            wpa = None
+            if self.args.wpa:
+              wpa = "glopglopglop"
+            ap = {
+              'bssid':None,
+              'essid': p['essid'],
+              'wpa': wpa
+              }
+            aps.append(ap)
+
+          self.create_aps(aps, 30)
       time.sleep(1)
   
   def getWirelessInterfacesList(self):
@@ -350,10 +351,10 @@ class Karma2(Thread):
           if packet.haslayer(Dot11ProbeReq):
             section = packet[Dot11ProbeReq][Dot11Elt]
             # SSID
-            if section.ID == 0 and section.info != '':
-              self.process_probe(section.info)
+            if section.ID == 0 and section.info.decode('utf8') != '':
+              self.process_probe(section.info.decode('utf8'))
         
-        sniff(prn=_filter,store=0)
+        sniff(iface=self.ifmon, prn=_filter,store=0)
     else:
       while True:
         time.sleep(1)

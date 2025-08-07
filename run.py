@@ -89,7 +89,7 @@ if __name__ == '__main__':
     log( "[+] Starting monitor mode on %s"%args.enable)
     p.wait()
 
-    lines = p.stdout.read()
+    lines = p.stdout.read().decode('utf8')
     m = re.match(r".*monitor mode enabled on (\w+).*", lines, re.S)
     if m is not None:
       iface, = m.groups()
@@ -100,8 +100,8 @@ if __name__ == '__main__':
     args.logpath = './logs'
     if not os.path.exists(args.logpath):
       os.mkdir(args.logpath)
-    #args.logpath = os.path.join(args.logpath,time.strftime("%Y-%m-%d_%H-%M-%S"))
-    args.logpath = os.path.join(args.logpath,str(random.randint(0,1e16)))
+    args.logpath = os.path.join(args.logpath,time.strftime("%Y-%m-%d_%H-%M-%S"))
+    #args.logpath = os.path.join(args.logpath,str(random.randint(0,1e16)))
     if not os.path.exists(args.logpath):
       os.mkdir(args.logpath)
     logpath = os.path.join(args.logpath, 'wifis.log')

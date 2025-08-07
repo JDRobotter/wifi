@@ -45,7 +45,11 @@ class SSLWebserver(Webserver):
     server_address = ('', self.port)
     httpd = server_class(server_address, self.app, handler_class)
     httpd.PRE = "HTTPS"
-    httpd.socket = ssl.wrap_socket(httpd.socket, keyfile=self.app.KEYFILE, certfile=self.app.CERTFILE, server_side=True)
+    #httpd.socket = ssl.wrap_socket(httpd.socket, keyfile=self.app.KEYFILE, certfile=self.app.CERTFILE, server_side=True)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    httpd.socket = ctx.wrap_socket(httpd.socket, True)
     httpd.serve_forever()
     self.app.log("[%s] HTTPS server on port %d is shutting down"%(ctxt("x",RED),self.port))
 
@@ -226,6 +230,13 @@ class HTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
     faked = True
     try:
+      print("======%s %s"%(host, path))
+      if host == '10.0.50.254' and path =='':
+        self.send_response(404)
+        self.end_headers()
+        logfaked()
+
+
       if path == 'generate_204' or path == 'gen_204' or path == 'mobile/status.php':
         self.send_response(204)
         self.end_headers()

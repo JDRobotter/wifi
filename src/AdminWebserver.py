@@ -73,7 +73,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     if full:
       if self.server.logfile is not None:
         self.server.logfile.close()
-      self.server.logfile = open(self.server.app.logfile.name, 'r')
+      self.server.logfile = open(self.server.app.logfile.name, 'r', encoding='utf8')
     content = []
     if self.server.logfile is not None:
       content = self.server.logfile.readlines()
@@ -110,7 +110,6 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
         status['aps'][key]['clients'] = {}
         for mac,client in list(viface.clients.items()):
           status['aps'][key]['clients'][mac] = client.get_data()
-        
     self._send_json(status)
 
   def _get_cookie(self, _bssid, _host):
