@@ -154,7 +154,7 @@ class AdminHTTPRequestHandler(HTTPRequestHandler):
     imgs = self.server.app.db.get_images()
     data = '<html><ul>'
     for img in imgs:
-      print img['service_uri']
+      print(img['service_uri'])
       data += '<li><img src="%s" alt=""></li>'%img['service_uri']
     data += '</ul><html>'
     self.wfile.write(data)

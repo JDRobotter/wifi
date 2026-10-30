@@ -112,7 +112,7 @@ class Karma2(Thread):
   def log(self, message):
     with self.log_lock:
       message="%s  %s"%(time.strftime("%H:%M:%S"), message)
-      print message
+      print(message)
       if self.logfile is not None:
         message="%s  %s"%(time.strftime("%Y-%m-%d %H:%M:%S"), message)
         self.logfile.write("%s\n"%message)
@@ -397,9 +397,9 @@ class Karma2(Thread):
     ftp.start()
 
   def status(self, signum, stack):
-    print ">>"
+    print(">>")
     for essid,ap in self.aps.iteritems():
-      print "%s => %s (%s), inactive for %ss/%ss"%(ap.ifhostapd.iface, ap.essid, len(ap.clients), int((time.time() - ap.activity_ts)), ap.timeout)
+      print("%s => %s (%s), inactive for %ss/%ss"%(ap.ifhostapd.iface, ap.essid, len(ap.clients), int((time.time() - ap.activity_ts)), ap.timeout))
       for mac,ip in ap.clients.iteritems():
-        print "\t%s => %s"%(mac,ip)
-    print "<<"
+        print("\t%s => %s"%(mac,ip))
+    print("<<")

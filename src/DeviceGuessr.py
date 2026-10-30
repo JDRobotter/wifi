@@ -49,15 +49,15 @@ class DeviceGuessr:
     self.devices = {}
 
   def new_hint(self, mac, brand, model, family):
-    print "NEW DEVICE HINT",mac,brand,model,family
+    print("NEW DEVICE HINT",mac,brand,model,family)
 
     # check if device already exist in base
     if not mac in self.devices:
-      print "DEVICE ADDED"
+      print("DEVICE ADDED")
       self.devices[mac] = DeviceGuess(brand,model,family)
 
     else:
-      print "DEVICE UPDATED"
+      print("DEVICE UPDATED")
       self.devices[mac].update(brand,model,family)
 
   def get_device_from_mac(self, mac):

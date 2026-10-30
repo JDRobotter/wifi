@@ -222,7 +222,7 @@ class VirtualInterface(Thread):
           lines = lr.readlines()
           for line in lines:
             if len(line) != 0:
-              print line
+              print(line)
         i += 1
         
       if dhcpfd in rlist:
@@ -230,7 +230,7 @@ class VirtualInterface(Thread):
         lines = lr.readlines()
         for line in lines:
           if len(line) != 0:
-            #print "dnsmasq  %s"%line
+            #print("dnsmasq  %s"%line)
             m = dhcp_failed_re.match(line)
             if m is not None:
               self.karma.log( "%s %s"%(ctxt("[!]",RED), line))
@@ -260,7 +260,7 @@ class VirtualInterface(Thread):
         lines = lr.readlines()
         for line in lines:
           if len(line) != 0:
-            #print "dnswatch %s"%line
+            #print("dnswatch %s"%line)
             dns = {}
             # only show requests
             if "CNAME" in line:
@@ -601,7 +601,7 @@ class AccessPoint(Thread):
           if len(line) != 0:
             if hostapd_log is not None:
               hostapd_log.write("%s\n"%line)
-            #print "hostapd  %s"%line
+            #print("hostapd  %s"%line)
             m = authenticated_re.match(line)
             if m is None:
               m = associated_re.match(line)
@@ -628,7 +628,7 @@ class AccessPoint(Thread):
                 self.karma.log( "%s Unable to start hostapd on interface %s: %s"%(ctxt("[!]",RED),ctxt(ifname,RED), line))
                 self.restart()
       
-    print "no more hostapd"
+    print("no more hostapd")
     hostapd_log.close()
     if not (self.karma.debug or keep_hostapd_log):
       os.remove(hostapd_log.name)
@@ -645,7 +645,7 @@ class AccessPoint(Thread):
   def restart(self):
     # will remove AP from list on next check
     if self.karma.debug:
-      print hostapd_error
+      print(hostapd_error)
 
   def get_essids(self):
     essids = []

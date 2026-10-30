@@ -112,7 +112,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
   
   def do_GET(self):
     ip = self.client_address[0]
-    print "GET"
+    print("GET")
     client = self.server.app.get_client_from_ip(ip)
     # do not fake unknown clients
     if client is None:
@@ -165,7 +165,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     user_agent_infos = None
     if self.headers.get('user-agent') is not None:
-        print self.headers.get('user-agent')
+        print(self.headers.get('user-agent'))
         ua_string = self.headers['user-agent']
         # parse UA using lib, store device intel and browser intel
         user_agent_infos = ua_parse(ua_string)
@@ -372,7 +372,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         faked = False
     except Exception as e:
-      print e
+      print(e)
     uri = "%s://%s"%(self.server.PRE.lower(),fullpath)
     client.register_service_request(self.server.PRE, 'GET', uri, '', self.headers_to_text(), False)
 
@@ -407,7 +407,7 @@ class HTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           user = {'uri':fullpath,'login': login,  'password':password}
           c.log_login(user)
     except Exception as e:
-      print e
+      print(e)
     
     # get content
     post = ''

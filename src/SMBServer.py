@@ -1,6 +1,6 @@
 from threading import Lock,Thread
 from impacket import smbserver
-from Utils import *
+from .Utils import *
 
 class SMBServer(Thread):
   daemon = True
